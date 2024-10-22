@@ -183,12 +183,22 @@ if (req.user.role === Role. Admin) {
     validateRequest(req, next, schema);
 }
 function update(req, res, next) {
+    // Check authorization
     if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) { 
-        return res.status(401).json({ message: 'Unauthorized' });
+        return res.status(401).json({ 
+            success: false,
+            message: 'Unauthorized - You can only update your own account unless you are an admin' 
+        });
     }
 
     accountService.update(req.params.id, req.body)
-        then (account =>res.json (account))
+        .then(account => {
+            res.json({
+                success: true,
+                message: 'Account updated successfully',
+                account: account
+            });
+        })
         .catch(next);
 }
 function _delete(req, res, next) {

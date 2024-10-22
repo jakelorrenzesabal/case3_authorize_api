@@ -6,31 +6,47 @@ const db = require('_helpers/db');
 module.exports = authorize;
 
 function authorize(roles = []) {
-    // roles param can be a single role string (e.g., 'Admin') or an array of roles (e.g., ['Admin', 'Manager'])
+    // roles param can be a single role string (e.g Role.User or 'User')
+    // or an array of roles (e.g [Role.Admin, Role.User] or ['Admin', 'User'])
     if (typeof roles === 'string') {
         roles = [roles];
     }
 
     return [
-        // Authenticate JWT tokens and attach user to request object {req.user}
-        jwt({ secret, algorithms: ['HS256'] }),
+        // authenticate JWT token and attach decoded token to request as req.auth
+        jwt({ 
+            secret, 
+            algorithms: ['HS256'],
+            requestProperty: 'auth' // this specifies where the decoded token will be attached
+        }),
 
-        // Authorize based on user role
+        // authorize based on user role
         async (req, res, next) => {
             try {
-                const account = await db.Account.findByPk(req.user.id);
-                
-                if (!account || (roles.length && !roles.includes(account.role))) {
-                    return res.status(401).json({ message: 'Unauthorized' });
+                const account = await db.Account.findByPk(req.auth.id);
+
+                if (!account) {
+                    return res.status(401).json({ message: 'Account no longer exists' });
                 }
 
-                // Authentication and authorization successful
-                req.user.role = account.role;
+                if (roles.length && !roles.includes(account.role)) {
+                    return res.status(401).json({ message: 'Unauthorized - Insufficient role permissions' });
+                }
+
+                // authentication and authorization successful
+                // attach user and role to request object
+                req.user = {
+                    ...req.auth,
+                    role: account.role
+                };
+
+                // add method to check if user owns a refresh token
                 const refreshTokens = await account.getRefreshTokens();
                 req.user.ownsToken = token => !!refreshTokens.find(x => x.token === token);
+
                 next();
             } catch (error) {
-                return next(error);
+                next(error);
             }
         }
     ];

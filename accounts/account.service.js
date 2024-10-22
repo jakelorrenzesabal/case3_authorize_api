@@ -179,7 +179,7 @@ async function hash (password) {
     return await bcrypt.hash (password, 10);
 }
 function generateJwtToken(account) {
-    return jwt.sign({ sub: account.id, id: account.id}, config.secret, { expiresIn: '15m' });
+    return jwt.sign({ sub: account.id, id: account.id}, config.secret, { expiresIn: '1h' });
 }
 function generateRefreshToken(account, ipAddress) {
     return new db.RefreshToken({
