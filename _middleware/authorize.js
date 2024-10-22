@@ -12,20 +12,26 @@ function authorize(roles = []) {
     }
 
     return [
+        // Authenticate JWT tokens and attach user to request object {req.user}
         jwt({ secret, algorithms: ['HS256'] }),
 
+        // Authorize based on user role
         async (req, res, next) => {
-            const account = await db.User.findByPk(req.user.id);
+            try {
+                const account = await db.Account.findByPk(req.user.id);
+                
+                if (!account || (roles.length && !roles.includes(account.role))) {
+                    return res.status(401).json({ message: 'Unauthorized' });
+                }
 
-            if (!account || (roles.length && !roles.includes(account.role))) {
-                return res.status(401).json({ message: 'Unauthorize'});
+                // Authentication and authorization successful
+                req.user.role = account.role;
+                const refreshTokens = await account.getRefreshTokens();
+                req.user.ownsToken = token => !!refreshTokens.find(x => x.token === token);
+                next();
+            } catch (error) {
+                return next(error);
             }
-
-            req.user.role = account.role;
-            const refreshToken = await account.getRefreshTokens();
-            req.user.ownsToken = token => !! refreshToken.find(x => x.token === token);
-
-            next();
         }
     ];
 }

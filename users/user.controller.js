@@ -7,28 +7,28 @@ const userService = require('./user.service');
 
 router.get('/', getAll); 
 router.get('/search', search);
-router.get('/searchAll', searchAll);  
+router.get('/searchAll',searchAll);  
 router.get('/:id', getById);
-router.post('/', createSchema, create);
-router.put('/:id', updateSchema, update);
-router.delete('/:id', _delete);
+router.post('/',createSchema, create);
+router.put('/:id',updateSchema, update);
+router.delete('/:id',_delete);
 
 router.put('/:id/role', updateRoleSchema, updateRole);
 
 router.get('/:id/preferences', getPreferences);
-router.put('/:id/preferences', updatePreferences);
+router.put('/:id/preferences',updatePreferences);
 
 router.put('/:id/password', changePassSchema, changePass);
 
 router.post('/login', loginSchema, login);
-router.post('/:id/logout', logout);
+router.post('/logout',  logout, logoutSchema);
 router.get('/:id/activity', getActivities);
 
 router.put('/:id/deactivate', deactivateUser);
 router.put('/:id/reactivate', reactivateUser);
 
 router.get('/:id/permission', getPermission);
-router.put('/:id/permission', updatePermission);
+router.post('/:id/permission', createPermission);
 
 
 module.exports = router;
@@ -70,18 +70,21 @@ function createSchema(req, res, next) {
         title: Joi.string().required(),
         firstName: Joi.string().required(),
         lastName: Joi.string().required(),
-        role: Joi.string().valid(Role.Admin, Role.User, Role.Manager).required(),
+        role: Joi.string().valid(Role.Admin, Role.User).required(),
         email: Joi.string().email().required(),
+        userName: Joi.string().required(),
         password: Joi.string().min(6).required(),
         confirmPassword: Joi.string().valid(Joi.ref('password')).required(),
         profilePic: Joi.string().required()
     });
     validateRequest(req, next, schema);
+
 }
 function updateSchema(req, res, next) {
     const schema = Joi.object({
         title: Joi.string().empty(''),
         firstName: Joi.string().empty(''),
+        userName: Joi.string().empty(''),
         lastName: Joi.string().empty(''),
         email: Joi.string().email().empty(''),
         password: Joi.string().min(6).empty(''),
@@ -99,7 +102,7 @@ function updateRole(req, res, next) {
 }
 function updateRoleSchema(req, res, next) {
     const schema = Joi.object({
-        role: Joi.string().valid(Role.Admin, Role.User, Role.Manager).empty('')
+        role: Joi.string().valid(Role.Admin, Role.User).empty('')
     })
     validateRequest(req, next, schema);
 }
@@ -140,40 +143,41 @@ function login(req, res, next) {
     userService.login({ ...req.body, ipAddress, browserInfo })
     .then(({ token }) => res.json({ token }))
     .catch(next);
-
-    // const { email, password } = req.body;
-
-    // userService.login({ email, password })
-    //     .then(user => {
-    //         if (!user) {
-    //             return res.status(400).json({ message: 'Email or password is incorrect' });
-    //         }
-
-    //         // Generate JWT token
-    //         const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '1h' });
-
-    //         res.json({ token });
-    //     })
-    //     .catch(next);
 }
 function loginSchema(req, res, next) {
     const schema = Joi.object({
-        email: Joi.string().email().required(),
+        userName: Joi.string().empty(),
+        email: Joi.string().email().empty(),
         password: Joi.string().required()
-    });
+    }).xor('userName', 'email') 
+        .messages({
+        'object.missing': 'Either email or userName must be provided.',
+        'object.xor': 'Both email and userName cannot be provided at the same time.'
+    })
+
     validateRequest(req, next, schema);
 }
 //====================Logout Function=========================
-function logout(req, res, next) {
-    const id = req.params.id; // Extract user ID from the route params
-    const ipAddress = req.ip || 'Unknown IP'; // Extract IP address from the request object
-    const browserInfo = req.headers['user-agent'] || 'Unknown Browser'; // Extract browser info from headers
+function logout(req, res, next) {// Assuming the user is authenticated and the `authenticate` middleware has added user info to `req.user`
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const browserInfo = req.headers['user-agent'] || 'Unknown Browser';
 
-    // Call the user service with the extracted information
-    userService.logout(id, { ipAddress, browserInfo })
-        .then(response => res.json(response))
-        .catch(next);
+    userService.logout({
+        id: req.user.id, // Use the authenticated user's ID from the token
+        ipAddress,
+        browserInfo
+    })
+    .then(response => res.json(response))
+    .catch(next);
+
 }
+
+function logoutSchema(req, res, next) {
+    const schema = Joi.object({
+    });
+    validateRequest(req, next, schema);
+}
+
 //====================Deactivate & Reactivate Function=========================
 function deactivateUser(req, res, next) {
     userService.deactivate(req.params.id)
@@ -225,9 +229,8 @@ function getPermission(req, res, next) {
         .then(permission => res.json(permission))
         .catch(next);
 }
-function updatePermission(req, res, next) {
-    userService.updatePermission(req.params.id, req.body)
+function createPermission(req, res, next) {
+    userService.updatePreferences(req.params.id, req.body)
         .then(() => res.json({ message: 'Access confirm' }))
         .catch(next);
 }
-

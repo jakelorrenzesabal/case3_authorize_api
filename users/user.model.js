@@ -6,6 +6,7 @@ function model(sequelize) {
     const attributes = {
         //======For Profile=================
         email: { type: DataTypes.STRING, allowNull: false },
+        userName: { type: DataTypes.STRING, allowNull: false },
         passwordHash: { type: DataTypes.STRING, allowNull: false },
         title: { type: DataTypes.STRING, allowNull: false },
         firstName: { type: DataTypes.STRING, allowNull: false },
@@ -15,18 +16,20 @@ function model(sequelize) {
 
         //======For Logging=================
         status: { type: DataTypes.ENUM('deactivated', 'active'), allowNull: false, defaultValue: 'active'},
+
+          // Date last logged in
         lastDateLogin: { type: DataTypes.DATE, allowNull: true },
         lastLogoutAt: { type: DataTypes.DATE, allowNull: true },
 
         //======For Permission=================
-        permission: { type: DataTypes.ENUM('grant', 'revoke'), allowNull: false, defaultValue: 'revoke'},
+        permission: { type: DataTypes.ENUM('grant', 'revoke'), allowNull: false, defaultValue: 'revoke'}
+    
 
-        branchId: { type: DataTypes.INTEGER, allowNull: true },
     };
     
     const options = {
         defaultScope: {
-            attributes: { exclude: ['passwordHash'] 
+            attributes: { exclude: ['passwordHash' ] 
             }
         },
         scopes: {
@@ -36,5 +39,3 @@ function model(sequelize) {
     
     return sequelize.define('User', attributes, options);
 }
-
-

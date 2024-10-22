@@ -19,7 +19,7 @@
         db.Order = require('../orders/order.model')(sequelize);
 
         db.Preferences = require('../models/preferences.model')(sequelize);
-        //db.User.hasMany(db.Preferences, { foreignKey: 'userId' });  // Branch has many Users
+        db.User.hasMany(db.Preferences, { foreignKey: 'userId' });  // Branch has many Users
         db.Preferences.belongsTo(db.User, { foreignKey: 'userId' });
 
         db.Product = require('../products/product.model')(sequelize);
@@ -33,7 +33,7 @@
 
         db.Account = require('../accounts/account.model')(sequelize);
         db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
-        db.Account.hasMany (db. RefreshToken, { onDelete: 'CASCADE' }); 
+        db.Account.hasMany (db.RefreshToken, { onDelete: 'CASCADE' }); 
         db.RefreshToken.belongsTo(db.Account);
 
         await sequelize.sync({ alter: true });

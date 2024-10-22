@@ -25,7 +25,7 @@ module.exports = {
     reactivate,
 
     getPermission,
-    updatePermission
+    createPermission
 };
 
 //===============================Simple CRUD========================================
@@ -36,8 +36,8 @@ async function getById(id) {
     const user = await db.User.findByPk(id, {
         include: [{
             model: db.Branch,
-            as: 'branch',  // This alias matches the 'as' you defined in the association
-            attributes: ['id', 'name', 'location']  // Select specific attributes if needed
+            as: 'branch',
+            attributes: ['id', 'name', 'location']
         }]
     });
     if (!user) throw 'User not found';
@@ -48,14 +48,22 @@ async function create(params) {
         throw 'Email "' + params.email + '" is already registered';
     }
 
-    if (![Role.Admin, Role.Manager, Role.User].includes(params.role)) {
-        throw 'Invalid role';
+    if (await db.User.findOne({ where: { userName: params.userName } })) {
+        throw 'userName "' + params.userName + '" is already registered';
     }
-    
     const user = new db.User(params);
     user.passwordHash = await bcrypt.hash(params.password, 10);
     await user.save();
 
+    const preferencesData = {
+        userId: user.id, // Reference to the newly created user's ID
+        theme: 'light',  // Default theme (you can modify these defaults as needed)
+        notifications: true,  // Default notifications preference
+        language: 'en'   // Default language
+    };
+
+    // Save the preferences for the user
+    await db.Preferences.create(preferencesData);
 }
 async function update(id, params) {
     const user = await getUser(id);
@@ -94,15 +102,17 @@ async function update(id, params) {
             ? `Updated fields: ${updatedFields.join(', ')}` 
             : 'No fields changed';
 
-        await logActivity(user.id, params.theme || 'Unknown IP', params.notification || 'Unknown Browser', updateDetails);
+        await logActivity(user.id, 'update', params.ipAddress || 'Unknown IP', params.browserInfo || 'Unknown Browser', updateDetails);
     } catch (error) {
         console.error('Error logging activity:', error);
     }
 }
+
+// ------------------------------------ Delete user by ID --------------------------------
 async function _delete(id) {
     const user = await getUser(id);
     await user.destroy();
-} 
+}
 async function getUser(id) {
     const user = await db.User.findByPk(id);
     if (!user) throw 'User ad found';
@@ -198,16 +208,21 @@ async function reactivate(id) {
     await user.save();
 }
 //===================Preferences Get & Update Function===========================
-async function getPreferences(userId, params) {
-    const preferences = await db.Preferences.findOne({ where: { userId: userId }, attributes: [ 'userId', 'theme', 'notifications', 'language' ] });
-    if (!preferences) throw 'User not found';
+async function getPreferences(id) {
+    const preferences = await db.Preferences.findOne({
+        where: { userId: id },
+        attributes: ['id', 'userId','theme', 'notifications', 'language']
+    });
+    if (!preferences) throw new Error('User not found');
     return preferences;
 }
-async function updatePreferences(userId, params) { 
-    const preferences = await db.Preferences.findOne({ where: { userId } });
-    if (!preferences) throw 'User not found';
+async function updatePreferences(id, params) {
+    const preferences = await db.Preferences.findOne({ where: { userId: id } });
+    if (!preferences) throw new Error('User not found');
 
+    // Update only the provided fields
     Object.assign(preferences, params);
+
     await preferences.save();
 }
 //===================Change Password function==============================
@@ -242,7 +257,23 @@ async function changePass(id, params) {
 }
 //===================Login wht Token function==============================
 async function login(params) {
-    const user = await db.User.scope('withHash').findOne({ where: { email: params.email } });
+    const { userName, email } = params;
+
+    // Ensure either email or userName is provided, but not both
+    if (!(userName || email)) {
+      throw new Error('Either email or userName must be provided.');
+    }
+    const query = { where: {} };
+    
+    if (userName) {
+      query.where.userName = userName;
+    } else if (email) {
+      query.where.email = email;
+    }
+    
+    // Perform the query using the constructed query object
+    const user = await db.User.scope('withHash').findOne(query);
+
     if (!user) throw 'User does not exist';
     
     // Check if the user's account is active
@@ -251,8 +282,9 @@ async function login(params) {
     const isPasswordValid = await bcrypt.compare(params.password, user.passwordHash);
     if (!isPasswordValid) throw 'Password Incorrect';
 
-    const token = jwt.sign({ id: params.id, email: params.email, role: params.role }, 
-        process.env.SECRET, {});
+    const token = jwt.sign(
+        { id: user.id, email: user.email, firstName: user.firstName},
+        process.env.SECRET,{ expiresIn: '1h'});
 
         user.lastDateLogin = new Date();  // Set current date and time
         await user.save();
@@ -266,20 +298,27 @@ async function login(params) {
     return { token };
 }
 //===================Logout function==============================
-async function logout(id, params) {
-    const user = await db.User.findByPk(id);
+async function logout(params) {
+    const user = await db.User.scope('withHash').findOne({ where: { id: params.id } });
     if (!user) throw new Error('User not found');
 
     try {
-        await logActivity(user.id, 'logout', params.ipAddress || 'Unknown IP', params.browserInfo || 'Unknown Browser', 'User logged out');
+        // Log the user logout activity with IP and browser info
+        await logActivity(
+            user.id,
+            'logout',
+            params.ipAddress || 'Unknown IP',
+            params.browserInfo || 'Unknown Browser',
+            'User logged out'
+        );
     } catch (error) {
         console.error('Error logging activity:', error);
     }
-
+    
     user.lastLogoutAt = new Date();
     await user.save();
 
-    return { message: 'User logged out successfully' };
+    return { message: 'Logged out successfully' };
 }
 //===================Logging function==============================
 async function logActivity(userId, actionType, ipAddress, browserInfo, updateDetails = '') {
@@ -321,6 +360,7 @@ async function logActivity(userId, actionType, ipAddress, browserInfo, updateDet
         throw error;
     }
 }
+
 async function getUserActivities(userId, filters = {}) {
     const user = await getUser(userId);
     if (!user) throw new Error('User not found');
@@ -344,6 +384,7 @@ async function getUserActivities(userId, filters = {}) {
         console.error('Error retrieving activities:', error);
         throw new Error('Error retrieving activities');
     }
+
 }
 //===================Permission function==============================
 async function getPermission(id, params) {
@@ -352,14 +393,10 @@ async function getPermission(id, params) {
 
     return permission;
 }
-async function updatePermission(id) {
-    const user = await getUser(id);
-    if (!user) throw 'User not found';
+async function createPermission(id, params) {
+    const permission = await db.User.findOne({ where: { id } });
+    if (!permission) throw 'User not found';
 
-    // Check if the user is already grant
-    if (user.permission === 'grant') throw 'User is already granted';
-
-    // Set status to 'grant' and save
-    user.permission = 'grant';
-    await user.save();
+    Object.assign(permission, params); 
+    await permission.save();
 }

@@ -30,6 +30,7 @@ function authenticateSchema(req, res, next) {
 
     validateRequest(req, next, schema);
 }
+
 function authenticate(req, res, next) {
     const { email, password } = req.body;
     const ipAddress = req.ip;
@@ -40,6 +41,7 @@ function authenticate(req, res, next) {
         })
         .catch(next);
 }
+
 function refreshToken (req, res, next) {
     const token = req.cookies.refreshToken;
     const ipAddress = req.ip;
@@ -73,7 +75,8 @@ function revokeToken (req, res, next) {
 function registerSchema(req, res, next) {
     const schema = Joi.object({
         title: Joi.string().required(),
-        firstName: Joi.string().required(), lastName: Joi.string().required(),
+        firstName: Joi.string().required(), 
+        lastName: Joi.string().required(),
         email: Joi.string().email().required(),
         password: Joi.string().min(6).required(),
         confirmPassword: Joi.string().valid(Joi.ref('password')).required(), 
@@ -137,15 +140,15 @@ function getAll(req, res, next) {
         .then (accounts => res.json (accounts))
         .catch(next);
 }
-function getById(req, res, next) {
-    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
-    
-    accountService.getById(req.params.id)
-        .then(account => account ? res.json (account): res.sendStatus (404)) 
-        .catch(next);
-}   
+    function getById(req, res, next) {
+        if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        
+        accountService.getById(req.params.id)
+            .then(account => account ? res.json (account): res.sendStatus (404)) 
+            .catch(next);
+    }   
 function createSchema (req, res, next) {
     const schema = Joi.object({
         title: Joi.string().required(), 
