@@ -183,12 +183,12 @@ function generateJwtToken(account) {
 }
 function generateRefreshToken(account, ipAddress) {
     return new db.RefreshToken({
-        accountId: account.id,
+        AccountId: account.id, // Set the AccountId field
         token: randomTokenString(),
         expires: new Date(Date.now() + 7*24*60*60*1000), 
         createdByIp: ipAddress
     });
-}     
+}
 function randomTokenString() {
     return crypto.randomBytes (40).toString('hex');
 }

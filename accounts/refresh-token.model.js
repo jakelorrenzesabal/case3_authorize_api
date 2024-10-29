@@ -11,13 +11,14 @@ function model(sequelize) {
         revoked: { type: DataTypes.DATE },
         revokedByIp: { type: DataTypes.STRING },
         replacedByToken: { type: DataTypes.STRING }, 
+        AccountId: { type: DataTypes.INTEGER, allowNull: false }, // Make this field required
         isExpired: {
             type: DataTypes.VIRTUAL,
             get() { return Date.now() >= this.expires; }
         },
         isActive: {
             type: DataTypes.VIRTUAL,
-            get() { return this.revoked && !this.isExpired; }
+            get() { return !this.revoked && !this.isExpired; }
         }
     };
 
