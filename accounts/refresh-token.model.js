@@ -5,12 +5,13 @@ module.exports = model;
 function model(sequelize) {
     const attributes = {
         token: { type: DataTypes.STRING },
-        expires: { type: DataTypes.STRING },
-        created: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+        expires: { type: DataTypes.DATE },
+        created: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }, 
         createdByIp: { type: DataTypes.STRING },
         revoked: { type: DataTypes.DATE },
         revokedByIp: { type: DataTypes.STRING },
-        replacedByToken: { type: DataTypes.STRING },
+        replacedByToken: { type: DataTypes.STRING }, 
+        AccountId: { type: DataTypes.INTEGER, allowNull: false }, // Make this field required
         isExpired: {
             type: DataTypes.VIRTUAL,
             get() { return Date.now() >= this.expires; }
@@ -22,7 +23,6 @@ function model(sequelize) {
     };
 
     const options = {
-        // disable default timestamp fields (createdAt and updatedAt)
         timestamps: false
     };
 
