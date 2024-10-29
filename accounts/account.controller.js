@@ -15,6 +15,7 @@ router.post('/forgot-password', forgotPasswordSchema, forgotPassword);
 router.post('/validate-reset-token', validateResetTokenSchema, validateResetToken);
 router.post('/reset-password', resetPasswordSchema, resetPassword);
 router.get('/', authorize (Role. Admin), getAll);
+router.get('/:id/activity',getActivities);
 router.get('/:id', authorize(), getById);
 router.post('/', authorize (Role. Admin), createSchema, create);
 router.put('/:id', authorize(), updateSchema, update);
@@ -33,14 +34,27 @@ function authenticateSchema(req, res, next) {
 
 function authenticate(req, res, next) {
     const { email, password } = req.body;
-    const ipAddress = req.ip;
-    accountService.authenticate({ email, password, ipAddress }) 
-        .then(({ refreshToken, ...account }) => {
-            setTokenCookie(res, refreshToken); 
-            res.json(account);
-        })
-        .catch(next);
-}
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const browserInfo = req.headers['user-agent'] || 'Unknown Browser';
+  
+    accountService.authenticate({ email, password, ipAddress, browserInfo })
+      .then(({ refreshToken, ...account }) => {
+        setTokenCookie(res, refreshToken);
+        res.json(account);
+      })
+      .catch(next);
+  }
+//===================Logging Function=======================================
+function getActivities(req, res, next) {
+    const filters = {
+      actionType: req.query.actionType,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate
+    };
+    accountService.getAccountActivities(req.params.id, filters)
+      .then(activities => res.json(activities))
+      .catch(next);
+  }
 
 function refreshToken (req, res, next) {
     const token = req.cookies.refreshToken;
@@ -131,10 +145,16 @@ function resetPasswordSchema(req, res, next) {
     validateRequest(req, next, schema);
 }
 function resetPassword(req, res, next) {
-    accountService.resetPassword(req.body)
-        .then(() => res.json({ message: 'Password reset successful, you can now login' }))
-        .catch(next);
-}
+    const { token, password } = req.body;
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const browserInfo = req.headers['user-agent'] || 'Unknown Browser';
+  
+    accountService.resetPassword({ token, password }, ipAddress, browserInfo)
+      .then(() => {
+        res.json({ message: 'Password reset successful, you can now login' });
+      })
+      .catch(next);
+  }
 function getAll(req, res, next) {
     accountService.getAll()
         .then (accounts => res.json (accounts))

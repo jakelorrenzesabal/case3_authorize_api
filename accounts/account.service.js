@@ -18,28 +18,99 @@ module.exports = {
     resetPassword, getAll,
     getById,
     create,
+    logActivity,
+    getAccountActivities,
     update,
     delete: _delete
 };
 
-async function authenticate({ email, password, ipAddress }) {
+async function authenticate({ email, password, ipAddress, browserInfo }) {
     const account = await db.Account.scope('withHash').findOne({ where: { email } });
-
-    if (!account || !account.isVerified || !(await bcrypt.compare (password, account.passwordHash))) { 
-        throw 'Email or password is incorrect';
+  
+    if (!account || !account.isVerified || !(await bcrypt.compare(password, account.passwordHash))) {
+      throw 'Email or password is incorrect';
     }
-
+  
     const jwtToken = generateJwtToken(account);
-    const refreshToken = generateRefreshToken (account, ipAddress);
-    
+    const refreshToken = generateRefreshToken(account, ipAddress);
+  
     await refreshToken.save();
-
+  
+    try {
+      await logActivity(account.id, 'login', ipAddress, browserInfo);
+    } catch (error) {
+      console.error('Error logging activity:', error);
+    }
+  
     return {
-        ...basicDetails (account), 
-        jwtToken,
-        refreshToken: refreshToken.token
-    }; 
-}
+      ...basicDetails(account),
+      jwtToken,
+      refreshToken: refreshToken.token
+    };
+  }
+async function logActivity(AccountId, actionType, ipAddress, browserInfo, updateDetails = '') {
+    try {
+      // Create a new log entry in the 'activity_log' table
+      await db.ActivityLog.create({
+        AccountId,
+        actionType,
+        actionDetails: `IP Address: ${ipAddress}, Browser Info: ${browserInfo}, Details: ${updateDetails}`,
+        timestamp: new Date()
+      });
+  
+      // Count the number of logs for the user
+      const logCount = await db.ActivityLog.count({ where: { AccountId } });
+  
+      if (logCount > 10) {
+        // Find and delete the oldest logs
+        const logsToDelete = await db.ActivityLog.findAll({
+          where: { AccountId },
+          order: [['timestamp', 'ASC']],
+          limit: logCount - 10
+        });
+  
+        if (logsToDelete.length > 0) {
+          const logIdsToDelete = logsToDelete.map(log => log.id);
+  
+          await db.ActivityLog.destroy({
+            where: {
+              id: {
+                [Op.in]: logIdsToDelete
+              }
+            }
+          });
+          console.log(`Deleted ${logIdsToDelete.length} oldest log(s) for user ${AccountId}.`);
+        }
+      }
+    } catch (error) {
+      console.error('Error logging activity:', error);
+      throw error;
+    }
+  }
+  async function getAccountActivities(AccountId, filters = {}) {
+    const account = await getAccount(AccountId);
+    if (!account) throw new Error('User not found');
+  
+    let whereClause = { AccountId };
+  
+    // Apply optional filters such as action type and timestamp range
+    if (filters.actionType) {
+      whereClause.actionType = { [Op.like]: `%${filters.actionType}%` };
+    }
+    if (filters.startDate || filters.endDate) {
+      const startDate = filters.startDate ? new Date(filters.startDate) : new Date(0);
+      const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
+      whereClause.timestamp = { [Op.between]: [startDate, endDate] };
+    }
+  
+    try {
+      const activities = await db.ActivityLog.findAll({ where: whereClause });
+      return activities;
+    } catch (error) {
+      console.error('Error retrieving activities:', error);
+      throw new Error('Error retrieving activities');
+    }
+  }
 async function refreshToken({ token, ipAddress }) { 
     const refreshToken = await getRefreshToken(token); 
     const account = await refreshToken.getAccount();
@@ -115,14 +186,22 @@ async function validateResetToken({token}) {
 
     return account;
 }
-async function resetPassword({ token, password }) { 
-    const account = await validateResetToken({token});
-
-    account.passwordHash = await hash (password);
+async function resetPassword({ token, password }, ipAddress, browserInfo) {
+    const account = await validateResetToken({ token });
+  
+    account.passwordHash = await hash(password);
     account.passwordReset = Date.now();
     account.resetToken = null;
     await account.save();
-}
+  
+    try {
+      await logActivity(account.id, 'password_reset', ipAddress, browserInfo);
+    } catch (error) {
+      console.error('Error logging activity:', error);
+    }
+  
+    return;
+  }
 
 async function getAll() {
     const accounts = await db.Account.findAll(); 

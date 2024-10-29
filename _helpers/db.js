@@ -15,7 +15,6 @@
         const sequelize = new Sequelize(database, user, password, { host: 'localhost', dialect: 'mysql' });
 
         db.User = require('../users/user.model')(sequelize);
-        db.ActivityLog = require('../models/activitylog.model')(sequelize);
         db.Order = require('../orders/order.model')(sequelize);
 
         db.Preferences = require('../models/preferences.model')(sequelize);
@@ -33,8 +32,10 @@
 
         db.Account = require('../accounts/account.model')(sequelize);
         db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
+        db.ActivityLog = require('../models/activitylog.model')(sequelize);
         db.Account.hasMany (db.RefreshToken, { onDelete: 'CASCADE' }); 
         db.RefreshToken.belongsTo(db.Account);
+        db.ActivityLog.belongsTo(db.Account, { foreignKey: 'AccountId' });
 
         await sequelize.sync({ alter: true });
     } 
