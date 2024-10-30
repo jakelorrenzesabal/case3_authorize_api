@@ -4,14 +4,7 @@ module.exports = model;
 
 function model(sequelize) {
     const attributes = {
-        userId: { 
-            type: DataTypes.INTEGER, 
-            allowNull: false,
-            references: {
-                model: 'users', // Reference to User model
-                key: 'id'
-            }
-        },
+        AccountId: { type: DataTypes.INTEGER, allowNull: false },
         theme: { type: DataTypes.ENUM('light', 'dark'), allowNull: false, defaultValue: 'light' },
         notifications: { type: DataTypes.BOOLEAN, allowNull: true, defaultValue: true },
         language: { type: DataTypes.ENUM('en', 'fr'), allowNull: false, defaultValue: 'en' },

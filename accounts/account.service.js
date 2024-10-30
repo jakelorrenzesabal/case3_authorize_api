@@ -15,12 +15,15 @@ module.exports = {
     verifyEmail,
     forgotPassword,
     validateResetToken,
-    resetPassword, getAll,
+    resetPassword, 
+    getAll,
     getById,
     create,
     logActivity,
     getAccountActivities,
     update,
+    updatePreferences,
+    getPreferences,
     delete: _delete
 };
 
@@ -151,6 +154,17 @@ async function register(params, origin) {
     account.passwordHash = await hash (params.password);
     
     await account.save();
+      
+    const preferencesData = {
+      AccountId: account.id, // Reference to the newly created user's ID
+      theme: 'light',  // Default theme (you can modify these defaults as needed)
+      notifications: true,  // Default notifications preference
+      language: 'en'   // Default language
+    };
+    
+    // Save the preferences for the user
+    await db.Preferences.create(preferencesData);
+
     
     await sendVerificationEmail (account, origin);
 }
@@ -220,29 +234,68 @@ async function create(params) {
     account.verified = Date.now();
 
     account.passwordHash = await hash (params.password);
-
+  
     return basicDetails (account);
 }
-async function update(id, params) {
-    const account = await getAccount(id);
-    
-    if (params.email && account.email !== params.email && await db.Account.findOne({ where: { email: params.email } })) { 
-        throw 'Email"' + params.email + '" is already taken';
-    }
+async function update(id, params, ipAddress, browserInfo) {
+  const account = await getAccount(id);
+  const oldData = account.toJSON(); // Get current user data as a plain object
+  const updatedFields = []; // Declare updatedFields array
+  const nonUserFields = ['ipAddress', 'browserInfo'];
 
-    if (params.password) {
-        params.passwordHash = await hash (params.password);
-    }
-    
-    Object.assign(account, params); 
-    account.updated = Date.now(); 
-    await account.save();
+  if (params.email && account.email !== params.email && await db.Account.findOne({ where: { email: params.email } })) { 
+      throw 'Email"' + params.email + '" is already taken';
+  }
 
-    return basicDetails (account);
+  if (params.password) {
+      params.passwordHash = await hash (params.password);
+  }
+
+  for (const key in params) {
+    if (params.hasOwnProperty(key) && !nonUserFields.includes(key)) {
+        if (oldData[key] !== params[key]) {
+            updatedFields.push(`${key}: ${oldData[key]} -> ${params[key]}`);
+        }
+    }
+}
+  Object.assign(account, params); 
+  account.updated = Date.now(); 
+ try {
+
+      await account.save();
+
+      // Log activity with updated fields
+      const updateDetails = updatedFields.length > 0 
+          ? `Updated fields: ${updatedFields.join(', ')}` 
+          : 'No fields changed';
+
+      await logActivity(account.id, 'profile update', ipAddress || 'Unknown IP', browserInfo || 'Unknown Browser', updateDetails);
+  } catch (error) {
+      console.error('Error logging activity:', error);
+  }
+  return basicDetails (account);
 }
 async function _delete(id) {
     const account = await getAccount(id);
     await account.destroy();
+}
+//===================Preferences Get & Update Function===========================
+async function getPreferences(id) {
+  const preferences = await db.Preferences.findOne({
+      where: { AccountId: id },
+      attributes: ['id', 'userId','theme', 'notifications', 'language']
+  });
+  if (!preferences) throw new Error('User not found');
+  return preferences;
+}
+async function updatePreferences(id, params) {
+  const preferences = await db.Preferences.findOne({ where: { AccountId: id } });
+  if (!preferences) throw new Error('User not found');
+
+  // Update only the provided fields
+  Object.assign(preferences, params);
+
+  await preferences.save();
 }
 async function getAccount (id) {
     const account = await db.Account.findByPk(id); 

@@ -14,6 +14,10 @@ router.post('/verify-email', verifyEmailSchema, verifyEmail);
 router.post('/forgot-password', forgotPasswordSchema, forgotPassword);
 router.post('/validate-reset-token', validateResetTokenSchema, validateResetToken);
 router.post('/reset-password', resetPasswordSchema, resetPassword);
+
+router.get('/:id/preferences',authorize(), getPreferences);
+router.put('/:id/preferences',authorize(), updatePreferences);
+
 router.get('/', authorize (Role. Admin), getAll);
 router.get('/:id/activity',getActivities);
 router.get('/:id', authorize(), getById);
@@ -55,7 +59,17 @@ function getActivities(req, res, next) {
       .then(activities => res.json(activities))
       .catch(next);
   }
-
+//====================Preferences Router Function=========================
+function getPreferences(req, res, next) {
+    accountService.getPreferences(req.params.id)
+        .then(preferences => res.json(preferences))
+        .catch(next);
+}
+function updatePreferences(req, res, next) {
+    accountService.updatePreferences(req.params.id, req.body)
+        .then(() => res.json({ message: 'Preferences updated successfully' }))
+        .catch(next);
+}
 function refreshToken (req, res, next) {
     const token = req.cookies.refreshToken;
     const ipAddress = req.ip;
@@ -204,23 +218,26 @@ if (req.user.role === Role. Admin) {
 }
 function update(req, res, next) {
     // Check authorization
-    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) { 
-        return res.status(401).json({ 
-            success: false,
-            message: 'Unauthorized - You can only update your own account unless you are an admin' 
-        });
+    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized - You can only update your own account unless you are an admin'
+      });
     }
-
-    accountService.update(req.params.id, req.body)
-        .then(account => {
-            res.json({
-                success: true,
-                message: 'Account updated successfully',
-                account: account
-            });
-        })
-        .catch(next);
-}
+  
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const browserInfo = req.headers['user-agent'] || 'Unknown Browser';
+  
+    accountService.update(req.params.id, req.body, ipAddress, browserInfo)
+      .then(account => {
+        res.json({
+          success: true,
+          message: 'Account updated successfully',
+          account: account
+        });
+      })
+      .catch(next);
+  }
 function _delete(req, res, next) {
     if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
         return res.status(401).json({ message: 'Unauthorized' });
