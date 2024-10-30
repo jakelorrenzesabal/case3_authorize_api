@@ -15,13 +15,10 @@
         const sequelize = new Sequelize(database, user, password, { host: 'localhost', dialect: 'mysql' });
 
         db.User = require('../users/user.model')(sequelize);
-        db.ActivityLog = require('../models/activitylog.model')(sequelize);
         db.Order = require('../orders/order.model')(sequelize);
 
-        db.Preferences = require('../models/preferences.model')(sequelize);
-        db.User.hasMany(db.Preferences, { foreignKey: 'userId' });  // Branch has many Users
-        db.Preferences.belongsTo(db.User, { foreignKey: 'userId' });
-
+        db.Preferences = require('../models/preferences.model')(sequelize);  // Branch has many Users
+    
         db.Product = require('../products/product.model')(sequelize);
         db.Inventory = require('../inventories/inventory.model')(sequelize);
         db.Product.hasOne(db.Inventory, { foreignKey: 'productId', as: 'inventory', onDelete: 'CASCADE' });
@@ -33,8 +30,11 @@
 
         db.Account = require('../accounts/account.model')(sequelize);
         db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
+        db.ActivityLog = require('../models/activitylog.model')(sequelize);
         db.Account.hasMany (db.RefreshToken, { onDelete: 'CASCADE' }); 
         db.RefreshToken.belongsTo(db.Account);
+        db.ActivityLog.belongsTo(db.Account, { foreignKey: 'AccountId' });
+        db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
 
         await sequelize.sync({ alter: true });
     } 
