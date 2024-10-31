@@ -1,5 +1,5 @@
 const db = require('_helpers/db');
-const { Sequelize } = require('sequelize');
+const Role = require('_helpers/role');
 
 module.exports = {
     getAllBranch,
@@ -10,96 +10,171 @@ module.exports = {
     getBranch,
     assignUser,
     removeUserFromBranch,
+    updateRole,
 
     deactivateBranch,
     reactivateBranch
 };
 
 async function getAllBranch() {
-    return await db.Branch.findAll();
+    // Only return active branches
+    return await db.Branch.findAll({
+        where: { status: 'active' }
+    });
 }
+
 async function getBranchById(id) {
     const branch = await db.Branch.findByPk(id, {
+        where: { status: 'active' }, // Only retrieve active branches
         include: [{
-            model: db.User,
-            as: 'users',  // This alias matches the 'as' you defined in the association
-            attributes: ['id', 'firstName', 'lastName', 'email', 'role']  // Select specific attributes if needed
+            model: db.Account,
+            attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
+            required: false // Allow branches without accounts
         }]
     });
-    if (!branch) throw 'Branch not found';
+    if (!branch) throw 'Branch not found or is deactivated';
     return branch;
 }
+
 async function createBranch(params) {
     const branch = new db.Branch(params);
+
+    if (await db.Branch.findOne({ where: { location: params.location } })) {
+        throw 'location "' + params.location + '" is already registered';
+    }
+    branch.status = 'active'; // Ensure new branches are active
     await branch.save();
 }
+
 async function updateBranch(id, params) {
     const branch = await getBranchById(id);
+    
+    // Prevent updates to deactivated branches
+    if (branch.status === 'deactivated') {
+        throw 'Cannot update a deactivated branch';
+    }
+    
     Object.assign(branch, params);
     await branch.save();
 }
+
 async function _deleteBranch(id) {
     const branch = await getBranchById(id);
-    branch.status = 'deleted'; // Soft delete by updating status
+    branch.status = 'deactivated'; // Soft delete by updating status
     await branch.save();
 }
+
 async function getBranch(id) {
-    const branch = await db.Branch.findByPk(id);
-    if (!branch) throw 'Branch2 not found';
+    const branch = await db.Branch.findByPk(id, {
+        where: { status: 'active' }
+    });
+    if (!branch) throw 'Branch not found or is deactivated';
     return branch;
 }
-async function assignUser(branchId, userId) {
-    const branch = await getBranchById(branchId);
-    const user = await db.User.findByPk(userId);
-    // if (!user) throw 'User not found';
-    
-    // branch.setUser(user); // assuming you have an association between Branch and User
-    // await branch.save();
-    if (!branch) throw 'Branch3 not found';
-    if (!user) throw 'User not found';
-    
-    // Set the branch for the user
-    //await user.setBranch(branch); // Use setBranch to assign the branch to the user
 
-    if (user.role !== Role.Manager) {
-        throw 'Only managers can be assigned to a branch';
+async function assignUser(branchId, AccountId) {
+    try {
+        // First, check if the branch is active
+        const branch = await getBranch(branchId);
+        
+        const account = await db.Account.findByPk(AccountId);
+        
+        if (!branch) throw new Error('Branch not found or is deactivated');
+        if (!account) throw new Error('User not found');
+        
+        // Optional: Check if the user is already assigned to this branch
+        if (account.BranchId === branch.id) {
+            throw new Error('User is already assigned to this branch');
+        }
+        
+        if (account.role !== Role.Manager) {
+            throw new Error('Only managers can be assigned to a branch');
+        }
+
+        // Update the account's branch
+        await db.Account.update(
+            { BranchId: branch.id }, 
+            { where: { id: AccountId } }
+        );
+
+        return { message: 'User assigned to branch successfully' };
+    } catch (error) {
+        console.error('Error in assignUser:', error);
+        throw error;
+    }
+}
+async function updateRole(id, params) {
+    // Find the branch first
+    const branch = await getBranchById(id);
+    
+    // Validate that a role is provided
+    if (!params.role) {
+        throw 'Role is required';
     }
 
-    user.branchId = branch.id;
-
-    await user.save(); // Save the changes to the user
+    // Update the role
+    await db.Account.update(
+        { role: params.role }, 
+        { 
+            where: { 
+                BranchId: id,
+               
+            } 
+        }
+    );
 }
-async function removeUserFromBranch(branchId, userId) {
-    // Find the user by userId and ensure they belong to the specified branch
-    const user = await db.User.findOne({ where: { id: userId, branchId: branchId } });
-    if (!user) throw 'User not found or not assigned to this branch';
+async function removeUserFromBranch(branchId, AccountId) {
+    // Find the account and verify they are part of the specified branch
+    const account = await db.Account.findOne({ 
+        where: { 
+            id: AccountId, 
+            BranchId: branchId 
+        } 
+    });
 
-    // Set the user's branchId to null to remove them from the branch
-    user.branchId = null;
-    await user.save();
+    // If no account found, throw an error
+    if (!account) {
+        throw 'User not found or not assigned to this branch';
+    }
 
-    return { message: 'User removed from branch' };
+    // First, verify the branch is active
+    const branch = await getBranch(branchId);
+
+    // Remove the user from the branch by setting BranchId to null
+    await db.Account.update(
+        { BranchId: null }, 
+        { where: { id: AccountId } }
+    );
+
+    return { message: 'User removed from branch successfully' };
 }
-//====================================================================================================
+
 async function deactivateBranch(id) {
     const branch = await getBranchById(id);
-    if (!branch) throw 'User not found';
+    if (!branch) throw 'Branch not found';
 
-    // Check if the user is already deactivated
+    // Check if the branch is already deactivated
     if (branch.status === 'deactivated') throw 'Branch is already deactivated';
 
-    // Set status to 'deactivated' and save
+    // Deactivate the branch
     branch.status = 'deactivated';
     await branch.save();
-}
-async function reactivateBranch(id) {
-    const branch = await getBranchById(id);
-    if (!branch) throw 'User not found';
 
-    // Check if the user is already active
+    // Optionally, remove users from this branch when deactivated
+    await db.Account.update(
+        { BranchId: null }, 
+        { where: { BranchId: id } }
+    );
+}
+
+async function reactivateBranch(id) {
+    const branch = await db.Branch.findByPk(id);
+    if (!branch) throw 'Branch not found';
+
+    // Check if the branch is already active
     if (branch.status === 'active') throw 'Branch is already active';
 
-    // Set status to 'active' and save
+    // Reactivate the branch
     branch.status = 'active';
     await branch.save();
 }
