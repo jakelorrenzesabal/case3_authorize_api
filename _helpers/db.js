@@ -14,27 +14,30 @@
 
         const sequelize = new Sequelize(database, user, password, { host: 'localhost', dialect: 'mysql' });
 
-        db.User = require('../users/user.model')(sequelize);
-        db.Order = require('../orders/order.model')(sequelize);
+    // Initialize models and add them to the exported `db` object
+    db.User = require('../users/user.model')(sequelize);
+    db.Order = require('../orders/order.model')(sequelize);
+    db.Preferences = require('../models/preferences.model')(sequelize);  
+    db.Product = require('../products/product.model')(sequelize);
+    db.Inventory = require('../inventories/inventory.model')(sequelize);
+    db.Branch = require('../branches/branch.model')(sequelize);
+    db.Account = require('../accounts/account.model')(sequelize);
+    db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
+    db.ActivityLog = require('../models/activitylog.model')(sequelize);
 
-        db.Preferences = require('../models/preferences.model')(sequelize);  // Branch has many Users
-    
-        db.Product = require('../products/product.model')(sequelize);
-        db.Inventory = require('../inventories/inventory.model')(sequelize);
-        db.Product.hasOne(db.Inventory, { foreignKey: 'productId', as: 'inventory', onDelete: 'CASCADE' });
-        db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
+    // Define associations
+    db.Product.hasOne(db.Inventory, { foreignKey: 'productId', as: 'inventory', onDelete: 'CASCADE' });
+    db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
 
-        db.Branch = require('../branches/branch.model')(sequelize);   
-        db.Branch.hasMany(db.User, { foreignKey: 'branchId', as: 'users' });  // Branch has many Users
-        db.User.belongsTo(db.Branch, { foreignKey: 'branchId', as: 'branch' });
+    db.Branch.hasMany(db.Account, { onDelete: 'CASCADE' });
+    db.Account.belongsTo(db.Branch);
 
-        db.Account = require('../accounts/account.model')(sequelize);
-        db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
-        db.ActivityLog = require('../models/activitylog.model')(sequelize);
-        db.Account.hasMany (db.RefreshToken, { onDelete: 'CASCADE' }); 
-        db.RefreshToken.belongsTo(db.Account);
-        db.ActivityLog.belongsTo(db.Account, { foreignKey: 'AccountId' });
-        db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
+    db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
+    db.RefreshToken.belongsTo(db.Account);
+
+    db.ActivityLog.belongsTo(db.Account, { foreignKey: 'AccountId' });
+    db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
+
 
         await sequelize.sync({ alter: true });
     } 
