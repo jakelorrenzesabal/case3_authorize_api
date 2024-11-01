@@ -1,23 +1,19 @@
 const express = require('express');
 const router = express.Router();
+const Joi = require('joi');
+const validateRequest = require('_middleware/validate-request');
 const productService = require('../products/product.service');
 const inventoryService = require('../inventories/inventory.service');
 const authorize = require('_middleware/authorize');
-// const authenticate = require('_middleware/product-authenticate');
 const Role = require('_helpers/role');
-
-// router.get('/', getProduct);
-// router.get('/:id', getProductById);
-// router.post('/', createProduct);
-// router.put('/:id', updateProduct);
-// router.delete('/:id', deleteProduct);
-// router.get('/:productId/availability', checkAvailability);
 
 router.get('/', authorize([Role.Admin, Role.Manager, Role.User]), getProduct);
 router.get('/:id', authorize([Role.Admin, Role.Manager, Role.User]), getProductById);
-router.post('/', authorize([Role.Admin, Role.Manager]), createProduct);
-router.put('/:id', authorize([Role.Admin, Role.Manager]), updateProduct);
-router.get('/:productId/availability', authorize([Role.User]), checkAvailability);
+router.post('/', authorize([Role.Admin, Role.Manager]), createProductSchema, createProduct);
+router.put('/:id', authorize([Role.Admin, Role.Manager]), updateProductSchema, updateProduct);
+router.get('/:productId/availability', authorize([Role.User, Role.Admin]), checkAvailability);
+
+router.delete('/:id', authorize([Role.Admin, Role.Manager]), deleteProduct);
 
 module.exports = router;
 
@@ -35,7 +31,27 @@ function createProduct(req, res, next) {
     productService.createProduct(req.body)
         .then(() => res.json({ message: 'Product created' }))
         .catch(next);
-}       
+}
+// Schema validation middleware
+function createProductSchema(req, res, next) {
+    const schema = Joi.object({
+        model: Joi.string().required().min(3).max(100),
+        brand: Joi.string().required().min(3).max(100),
+        price: Joi.number().required().min(0),
+        quantity: Joi.number().integer().min(0)
+    });
+    validateRequest(req, next, schema);
+}
+
+function updateProductSchema(req, res, next) {
+    const schema = Joi.object({
+        model: Joi.string().min(3).max(100).empty(''),
+        brand: Joi.string().min(3).max(100).empty(''),
+        price: Joi.number().min(0).empty(''),
+        quantity: Joi.number().integer().min(0).empty('')
+    });
+    validateRequest(req, next, schema);
+}
 function updateProduct(req, res, next) {
     productService.updateProduct(req.params.id, req.body)
         .then(() => res.json({ message: 'Product updated' }))

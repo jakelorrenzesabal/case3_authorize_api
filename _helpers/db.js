@@ -26,7 +26,7 @@
     db.ActivityLog = require('../models/activitylog.model')(sequelize);
 
     // Define associations
-    db.Product.hasOne(db.Inventory, { foreignKey: 'productId', as: 'inventory', onDelete: 'CASCADE' });
+    db.Product.hasOne(db.Inventory, { as: 'inventory', foreignKey: 'productId' });
     db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
 
     db.Branch.hasMany(db.Account, { onDelete: 'CASCADE' });
@@ -39,5 +39,5 @@
     db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
 
 
-        await sequelize.sync({ alter: true });
+        await sequelize.sync({ force: false });
     } 
