@@ -10,21 +10,17 @@ async function getInventory() {
     return await db.Inventory.findAll({ include: db.Product });
 }
 async function updateStock(productId, quantity) {
-    // const inventory = await db.Inventory.findOne({ where: { productId } });
-    // if (inventory) {
-    //     inventory.quantity += quantity;
-    //     await inventory.save();
-    // } else {
-    //     await db.Inventory.create({ productId, quantity });
-    // }
-    const inventory = await db.Inventory.findOne({ where: { productId } });
-    if (!inventory) throw 'Inventory not found for this product';
+    if (!productId) {
+        throw new Error('Product ID is required');
+    }
 
-    // Update stock level
+    const inventory = await db.Inventory.findOne({ where: { productId } });
+    if (!inventory) {
+        throw new Error('Inventory not found for this product');
+    }
+
     inventory.quantity = quantity;
-    await inventory.save();
-    
-    return inventory;
+    return await inventory.save();
 }
 async function checkAvailability(productId) {
     // Fetch product and its inventory details
@@ -37,7 +33,7 @@ async function checkAvailability(productId) {
     });
 
     return product ? {
-        model: product.model,
+        name: product.name,
         quantity: product.inventory ? product.inventory.quantity : 0
     } : null;
 }

@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const inventoryService = require('../inventories/inventory.service');
+const authorize = require('_middleware/authorize');
+const Role = require('_helpers/role');
 
-router.get('/', getInventory);
-router.post('/', updateStock);
+router.get('/', authorize([Role.Admin, Role.Manager]), getInventory);
+router.post('/', authorize([Role.Admin, Role.Manager]), updateStock);
 
 module.exports = router;
 

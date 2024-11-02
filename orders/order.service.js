@@ -6,96 +6,99 @@ module.exports = {
     getOrderById,
     createOrder,
     updateOrder,
-    //cancelOrder,
+    cancelOrder,
     trackOrderStatus,
     processOrder,
     shipOrder,
-    deliverOrder
+    deliverOrder,
 };
+
 async function getAllOrders() {
-    return await db.Order.findAll({ where: { orderStatus: ['pendding', 'processed', 'shipped', 'delivered'] } });
+    return await db.Order.findAll({
+        where: {
+            orderStatus: ['pending', 'processing', 'shipped', 'delivered']
+        }
+    });
 }
+
 async function getOrderById(id) {
     return await db.Order.findByPk(id);
 }
+
 async function createOrder(params) {
     const order = new db.Order(params);
     await order.save();
     return order;
 }
+
 async function updateOrder(id, params) {
     const order = await db.Order.findByPk(id);
     if (!order) throw 'Order not found';
+    if (order.orderStatus === 'cancelled') throw 'Cannot update a cancelled order';
+
     Object.assign(order, params);
     await order.save();
     return order;
+}
 
-    // const order = await getOrderById(id);
-    // if (!order) throw 'Order not found';
+async function cancelOrder(id) {
+    const order = await getOrderById(id);
+    if (!order) throw 'Order not found';
 
-    // Object.assign(order, params);
-    // return await order.save();
-} 
-// async function cancelOrder(id) {
-//     const order = await getById(id);
-//     if (!order) throw 'Order not found';
-//     if (order.orderStatus === 'cancel') throw 'Order is already cancelled';
-//     order.orderStatus = 'cancel';
-//     await order.save();
-//     return order;
+    // Check if the order is already cancelled
+    if (order.orderStatus === 'cancelled') {
+        throw 'Order is already cancelled';
+    }
 
-    // const order = await getOrderById(id);
-    // if (!order) throw 'Order not found';
+    // Only allow cancellation for pending or processing orders
+    if (['shipped', 'delivered'].includes(order.orderStatus)) {
+        throw 'Cannot cancel order that has been shipped or delivered';
+    }
 
-    // // Check if the user is already deactivated
-    // if (order.orderStatus === 'cancel') throw 'Order is already cancelled';
+    // Set status to 'cancelled' and save the order
+    order.orderStatus = 'cancelled';
+    await order.save();
 
-    // // Set status to 'deactivated' and save
-    // order.orderStatus = 'cancel';
-    // await order.save();
-//}
+    // Find the associated product and deactivate it if needed
+    const product = await db.Product.findByPk(order.productId);
+    if (product) {
+        product.isAvailable = false;
+        await product.save();
+        throw 'The product has been deactivated because the order was cancelled';
+    }
+
+    return order;
+}
+
 async function trackOrderStatus(id) {
     const order = await db.Order.findByPk(id, { attributes: ['orderStatus'] });
     if (!order) throw 'Order not found';
     return order.orderStatus;
 }
+
 async function processOrder(id) {
     const order = await getOrderById(id);
     if (!order) throw 'Order not found';
+    if (order.orderStatus === 'cancelled') throw 'Cannot process a cancelled order';
 
-    // Check if the order is already processed
-    if (order.orderStatus === 'processed') throw 'Order is already processed';
-
-    // Set status to 'processed' and save
-    order.orderStatus = 'processed';
+    order.orderStatus = 'processing';
     await order.save();
 }
+
 async function shipOrder(id) {
     const order = await getOrderById(id);
     if (!order) throw 'Order not found';
+    if (order.orderStatus === 'cancelled') throw 'Cannot ship a cancelled order';
 
-    // Check if the order is already processed
-    if (order.orderStatus === 'shipped') throw 'Order is already shipped';
-
-    // Set status to 'processed' and save
     order.orderStatus = 'shipped';
     await order.save();
 }
+
 async function deliverOrder(id) {
     const order = await getOrderById(id);
     if (!order) throw 'Order not found';
+    if (order.orderStatus === 'cancelled') throw 'Cannot deliver a cancelled order';
 
-    // Check if the order is already processed
-    if (order.orderStatus === 'delivered') throw 'Order is already delivered';
-
-    // Set status to 'processed' and save
     order.orderStatus = 'delivered';
     await order.save();
 }
-// async function updateOrderStatus(id, status) {
-//     const order = await db.Order.findByPk(id);
-//     if (!order) throw 'Order not found';
-//     order.status = status;
-//     await order.save();
-//     return order;
-// }
