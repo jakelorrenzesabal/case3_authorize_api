@@ -9,6 +9,7 @@ const Role = require('_helpers/role');
 
 module.exports = { 
     authenticate,
+    logout, // Add new logout function to exports
     refreshToken,
     revokeToken,
     register,
@@ -51,6 +52,52 @@ async function authenticate({ email, password, ipAddress, browserInfo }) {
       refreshToken: refreshToken.token
     };
   }
+ // Modified logout function
+async function logout({ token, ipAddress, browserInfo, userId }) {
+  try {
+      // Find all active refresh tokens for the user
+      const refreshTokens = await db.RefreshToken.findAll({ 
+          where: { 
+              AccountId: userId,
+              revoked: null,
+              expires: {
+                  [Op.gt]: new Date()
+              }
+          }
+      });
+
+      // Revoke all active refresh tokens
+      const updatePromises = refreshTokens.map(token => {
+          token.revoked = Date.now();
+          token.revokedByIp = ipAddress;
+          return token.save();
+      });
+
+      await Promise.all(updatePromises);
+
+      // Find and expire the specific token used for logout
+      const currentToken = await db.RefreshToken.findOne({ 
+          where: { 
+              token: token
+          }
+      });
+
+      if (currentToken) {
+          currentToken.revoked = Date.now();
+          currentToken.revokedByIp = ipAddress;
+          currentToken.expires = Date.now(); // Immediately expire the token
+          await currentToken.save();
+      }
+
+      // Log the logout activity
+      await logActivity(userId, 'logout', ipAddress, browserInfo, 'All sessions terminated');
+
+      return true;
+  } catch (error) {
+      console.error('Logout error:', error);
+      throw new Error('Error during logout: ' + error.message);
+  }
+}
 async function logActivity(AccountId, actionType, ipAddress, browserInfo, updateDetails = '') {
     try {
       // Create a new log entry in the 'activity_log' table

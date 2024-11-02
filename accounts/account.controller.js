@@ -7,6 +7,7 @@ const Role = require('_helpers/role');
 const accountService = require('./account.service');
 
 router.post('/authenticate', authenticateSchema, authenticate);
+router.post('/logout', authorize(), logout); // New logout route
 router.post('/refresh-token', refreshToken);
 router.post('/revoke-token', authorize(), revokeTokenSchema, revokeToken); 
 router.post('/register', registerSchema, register);
@@ -48,6 +49,28 @@ function authenticate(req, res, next) {
       })
       .catch(next);
   }
+  function logout(req, res, next) {
+    const token = req.cookies.refreshToken;
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const browserInfo = req.headers['user-agent'] || 'Unknown Browser';
+    
+    if (!token) {
+        return res.status(400).json({ 
+            success: false,
+            message: 'No refresh token provided' 
+        });
+    }
+
+    accountService.logout({ token, ipAddress, browserInfo, userId: req.user.id })
+        .then(() => {
+            res.clearCookie('refreshToken'); // Clear the refresh token cookie
+            res.json({ 
+                success: true,
+                message: 'Logout successful' 
+            });
+        })
+        .catch(next);
+}
 //===================Logging Function=======================================
 function getActivities(req, res, next) {
     const filters = {
