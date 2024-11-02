@@ -33,7 +33,7 @@ async function checkAvailability(productId) {
     });
 
     return product ? {
-        model: product.model,
+        name: product.name,
         quantity: product.inventory ? product.inventory.quantity : 0
     } : null;
 }

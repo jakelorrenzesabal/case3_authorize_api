@@ -19,7 +19,7 @@ module.exports = {
 async function getAllBranch() {
     // Only return active branches
     return await db.Branch.findAll({
-        where: { status: 'active' }
+        where: { branchStatus: 'active' }
     });
 }
 
@@ -33,6 +33,7 @@ async function getBranchById(id) {
         }]
     });
     if (!branch) throw 'Branch not found or is deactivated';
+    await checkIfActive(branch);
     return branch;
 }
 
@@ -50,7 +51,7 @@ async function updateBranch(id, params) {
     const branch = await getBranchById(id);
     
     // Prevent updates to deactivated branches
-    if (branch.status === 'deactivated') {
+    if (branch.branchStatus === 'deactivated') {
         throw 'Cannot update a deactivated branch';
     }
     
@@ -60,13 +61,13 @@ async function updateBranch(id, params) {
 
 async function _deleteBranch(id) {
     const branch = await getBranchById(id);
-    branch.status = 'deactivated'; // Soft delete by updating status
+    branch.branchStatus = 'deactivated'; // Soft delete by updating status
     await branch.save();
 }
 
 async function getBranch(id) {
     const branch = await db.Branch.findByPk(id, {
-        where: { status: 'active' }
+        where: { branchStatus: 'active' }
     });
     if (!branch) throw 'Branch not found or is deactivated';
     return branch;
@@ -79,6 +80,7 @@ async function assignUser(branchId, AccountId) {
         
         const account = await db.Account.findByPk(AccountId);
         
+        await checkIfActive(branch); // Check if branch is active
         if (!branch) throw new Error('Branch not found or is deactivated');
         if (!account) throw new Error('User not found');
         
@@ -99,7 +101,6 @@ async function assignUser(branchId, AccountId) {
 
         return { message: 'User assigned to branch successfully' };
     } catch (error) {
-        console.error('Error in assignUser:', error);
         throw error;
     }
 }
@@ -154,10 +155,10 @@ async function deactivateBranch(id) {
     if (!branch) throw 'Branch not found';
 
     // Check if the branch is already deactivated
-    if (branch.status === 'deactivated') throw 'Branch is already deactivated';
+    if (branch.branchStatus === 'deactivated') throw 'Branch is already deactivated';
 
     // Deactivate the branch
-    branch.status = 'deactivated';
+    branch.branchStatus = 'deactivated';
     await branch.save();
 
     // Optionally, remove users from this branch when deactivated
@@ -172,9 +173,15 @@ async function reactivateBranch(id) {
     if (!branch) throw 'Branch not found';
 
     // Check if the branch is already active
-    if (branch.status === 'active') throw 'Branch is already active';
+    if (branch.branchStatus === 'active') throw 'Branch is already active';
 
     // Reactivate the branch
-    branch.status = 'active';
+    branch.branchStatus = 'active';
     await branch.save();
+}
+// Helper function to check if the product is active
+async function checkIfActive(branch) {
+    if (branch.branchStatus === 'deactivated') {
+        throw new Error('Product is deactivated');
+    }
 }

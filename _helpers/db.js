@@ -39,5 +39,5 @@
     db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
 
 
-        await sequelize.sync({ force: false });
+        await sequelize.sync({ alter: true });
     } 

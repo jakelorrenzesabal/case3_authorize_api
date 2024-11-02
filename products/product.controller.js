@@ -11,9 +11,10 @@ router.get('/', authorize([Role.Admin, Role.Manager, Role.User]), getProduct);
 router.get('/:id', authorize([Role.Admin, Role.Manager, Role.User]), getProductById);
 router.post('/', authorize([Role.Admin, Role.Manager]), createProductSchema, createProduct);
 router.put('/:id', authorize([Role.Admin, Role.Manager]), updateProductSchema, updateProduct);
-router.get('/:productId/availability', authorize([Role.User, Role.Admin]), checkAvailability);
+router.get('/:productId/availability', authorize([Role.User]),  checkAvailability);
 
-router.delete('/:id', authorize([Role.Admin, Role.Manager]), deleteProduct);
+router.put('/:id/deactivate', authorize([Role.Admin, Role.Manager]), deactivateProduct);
+router.put('/:id/reactivate', authorize([Role.Admin, Role.Manager]), reactivateProduct);
 
 module.exports = router;
 
@@ -35,8 +36,8 @@ function createProduct(req, res, next) {
 // Schema validation middleware
 function createProductSchema(req, res, next) {
     const schema = Joi.object({
-        model: Joi.string().required().min(3).max(100),
-        brand: Joi.string().required().min(3).max(100),
+        name: Joi.string().required().min(3).max(100),
+        description: Joi.string().required().min(3).max(100),
         price: Joi.number().required().min(0),
         quantity: Joi.number().integer().min(0)
     });
@@ -45,8 +46,8 @@ function createProductSchema(req, res, next) {
 
 function updateProductSchema(req, res, next) {
     const schema = Joi.object({
-        model: Joi.string().min(3).max(100).empty(''),
-        brand: Joi.string().min(3).max(100).empty(''),
+        name: Joi.string().min(3).max(100).empty(''),
+        description: Joi.string().min(3).max(100).empty(''),
         price: Joi.number().min(0).empty(''),
         quantity: Joi.number().integer().min(0).empty('')
     });
@@ -57,24 +58,37 @@ function updateProduct(req, res, next) {
         .then(() => res.json({ message: 'Product updated' }))
         .catch(next);
 }
-function deleteProduct(req, res, next) {
-    productService.deleteProduct(req.params.id, req.body)
-        .then(() => res.json({ message: 'Product deleted' }))
-        .catch(next);
+function deactivateProduct(req, res, next) {
+    productService.deactivate(req.params.id)
+        .then(() => res.json({ message: 'Product deactivated successfully' }))
+        .catch(next); // Pass error to errorHandler
 }
-function checkAvailability(req, res, next) {
+
+function reactivateProduct(req, res, next) {
+    productService.reactivate(req.params.id)
+        .then(() => res.json({ message: 'Product reactivated successfully' }))
+        .catch(next); // Pass error to errorHandler
+}
+// Modified checkAvailability function
+async function checkAvailability(req, res, next) {
     const productId = req.params.productId;
 
-    inventoryService.checkAvailability(productId)
-        .then(product => {
-            if (!product) return res.status(404).json({ message: 'Product not found' });
-            const available = product.quantity > 0;
-            res.json({
-                product: product.model,
-                available,
-                quantity: product.quantity
-            });
-        })
-        .catch(next);
-}
+    try {
+        const product = await productService.getProductById(productId);
 
+        // No need to check if active here; already checked in getProductById
+        const inventory = await inventoryService.checkAvailability(productId);
+        const available = inventory && inventory.quantity > 0;
+
+        res.json({
+            product: product.name,
+            available,
+            quantity: inventory ? inventory.quantity : 0
+        });
+    } catch (error) {
+        if (error.message === 'Invalid product ID') {
+            return res.status(404).json({ message: 'Product not found or ID is invalid' });
+        }
+        next(error);
+    }
+}

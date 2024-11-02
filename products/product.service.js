@@ -5,19 +5,30 @@ module.exports = {
     getProductById,
     createProduct,
     updateProduct,
-    deleteProduct
+    deactivate,
+    reactivate
 };
 
 async function getProduct() {
-    return await db.Product.findAll({ where: { status: 'active' } });
+    return await db.Product.findAll({ where: { productStatus: 'active' } });
 }
 async function getProductById(id) {
-    return await db.Product.findByPk(id);
+    const product = await db.Product.findByPk(id);
+
+    // Check if the product exists
+    if (!product) {
+        throw new Error('Invalid product ID');
+    }
+
+    // Check if the product is active
+    await checkIfActive(product);
+    return product;
 }
 async function createProduct(params) {
-    let product = await db.Product.findOne({ where: { model: params.model } });
+    let product = await db.Product.findOne({ where: { name: params.name } });
 
     if (product) {
+        // await checkIfActive(product);
         // Product exists, update the inventory quantity
         const inventory = await db.Inventory.findOne({ where: { productId: product.id } });
         
@@ -36,10 +47,10 @@ async function createProduct(params) {
     } else {
         // Product doesn't exist, create a new product
         product = await db.Product.create({
-            model: params.model,
-            brand: params.brand,
+            name: params.name,
+            description: params.description,
             price: params.price,
-            status: 'active'
+            productStatus: 'active'
         });
 
         // Create inventory for the new product
@@ -54,26 +65,37 @@ async function createProduct(params) {
 async function updateProduct(id, params) {
     const product = await getProductById(id);
     if (!product) throw 'Product not found';
-
+    await checkIfActive(product);
     Object.assign(product, params);
     return await product.save();
 }
-async function deleteProduct(productId) {
-    // Find the product by ID
-    const product = await db.Product.findByPk(productId);
-    if (!product) {
-        throw 'Product not found';
-    }
+//------------------------- Deactivate product -------------------------
+async function deactivate(id) {
+    const product = await getProductById(id);
+    if (!product) throw 'Product not found';
 
-    // Delete the inventory associated with the product (if exists)
-    await db.Inventory.destroy({
-        where: { productId: product.id }
-    });
+    // Check if the product is already deactivated
+    if (product.productStatus === 'deactivated') throw 'Product is already deactivated';
 
-    // Delete the product
-    await product.destroy();
-
-    return { message: 'Product deleted permanently' };
+    // Set status to 'deactivated' and save
+    product.productStatus = 'deactivated';
+    await product.save();
 }
 
+async function reactivate(id) {
+    const product = await getProductById(id);
+    if (!product) throw 'Product not found';
 
+    // Check if the product is already active
+    if (product.productStatus === 'active') throw 'Product is already active';
+
+    // Set status to 'active' and save
+    product.productStatus = 'active';
+    await product.save();
+}
+// Helper function to check if the product is active
+async function checkIfActive(product) {
+    if (product.productStatus === 'deactivated') {
+        throw new Error('Product is deactivated');
+    }
+}

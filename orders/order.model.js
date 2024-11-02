@@ -11,7 +11,6 @@ function model(sequelize) {
         },
         shippingAddress: { type: DataTypes.STRING, allowNull: false },
         totalAmount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-        //userId: { type: DataTypes.STRING, allowNull: false }
 
     };
 
@@ -19,10 +18,6 @@ function model(sequelize) {
         timestamps: true 
     };
 
-    // Order.associate = (model) => {
-    //     belongsTo(model.User, { foreignKey: 'userId', as: 'customer' });
-    //     belongsToMany(model.Product, { through: 'OrderProducts', foreignKey: 'orderId' });
-    // }
 
     return sequelize.define('Order', attributes, options);
 }
