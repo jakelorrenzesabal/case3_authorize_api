@@ -11,7 +11,7 @@ router.get('/:id', authorize([Role.Admin, Role.Manager]), getOrderById);
 router.post('/', authorize([Role.User]), createOrderSchema, createOrder);
 router.put('/:id', authorize([Role.Admin, Role.Manager]), updateOrderSchema, updateOrder);
 router.put('/:id/cancel', authorize([Role.Admin, Role.Manager, Role.User]), cancelOrder);
-router.get('/:id/status', authorize([Role.Admin, Role.Manager]), trackOrderStatus);
+router.get('/:id/status', authorize([Role.User]), trackOrderStatus);
 router.put('/:id/process', authorize([Role.Admin, Role.Manager]), processOrder);
 router.put('/:id/ship', authorize([Role.Admin, Role.Manager]), shipOrder);
 router.put('/:id/deliver', authorize([Role.Admin, Role.Manager]), deliverOrder);
@@ -35,15 +35,9 @@ function createOrder(req, res, next) {
 }
 function createOrderSchema(req, res, next) {
     const schema = Joi.object({
-        userId: Joi.number().required(),
-        items: Joi.array().items(Joi.object({
-            productId: Joi.number().required(),
-            quantity: Joi.number().positive().required(),
-            price: Joi.number().positive().required()
-        })).min(1).required(),
+        orderProduct: Joi.string().required().max(500),
         totalAmount: Joi.number().positive().required(),
-        shippingAddress: Joi.string().required().max(500),
-        paymentMethod: Joi.string().valid('credit_card', 'paypal', 'bank_transfer').required()
+        shippingAddress: Joi.string().required().max(500)
     });
     validateRequest(req, next, schema);
 }
@@ -51,16 +45,10 @@ function createOrderSchema(req, res, next) {
 // Validation schema for updating an order
 function updateOrderSchema(req, res, next) {
     const schema = Joi.object({
-        userId: Joi.number().optional(),
-        items: Joi.array().items(Joi.object({
-            productId: Joi.number().required(),
-            quantity: Joi.number().positive().required(),
-            price: Joi.number().positive().required()
-        })).min(1).optional(),
+        orderProduct: Joi.string().max(500).optional(),
         totalAmount: Joi.number().positive().optional(),
         shippingAddress: Joi.string().max(500).optional(),
-        paymentMethod: Joi.string().valid('credit_card', 'paypal', 'bank_transfer').optional(),
-        status: Joi.string().valid('pending', 'processing', 'shipped', 'delivered', 'cancelled').optional()
+        orderStatus: Joi.string().valid('pending', 'processing', 'shipped', 'delivered', 'cancelled').optional()
     });
     validateRequest(req, next, schema);
 }
