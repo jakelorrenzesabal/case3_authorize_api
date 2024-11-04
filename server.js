@@ -7,6 +7,11 @@ const path = require('path');
 const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser');
 
+app.use(cors({
+    origin: 'http://localhost:4200',
+    credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
