@@ -230,7 +230,7 @@ async function forgotPassword({ email }, origin) {
     if (!account) return;
     
     account.resetToken = randomTokenString();
-    account.resetTokenExpires= new Date(Date.now() + 24*68*60*1000);
+    account.resetTokenExpires= new Date(Date.now() + 24*60*60*1000);
     await account.save();
 
     await sendPasswordResetEmail (account, origin);
@@ -250,9 +250,14 @@ async function validateResetToken({token}) {
 async function resetPassword({ token, password }, ipAddress, browserInfo) {
     const account = await validateResetToken({ token });
   
+     // Add password validation if needed
+     if (password.length < 6) {
+      throw 'Password must be at least 6 characters';
+  }
     account.passwordHash = await hash(password);
     account.passwordReset = Date.now();
     account.resetToken = null;
+    account.resetTokenExpires = null; // Clear the expiry
     await account.save();
   
     try {
@@ -274,15 +279,33 @@ async function getById(id) {
     return basicDetails (account);
 }
 async function create(params) {
-    if (await db.Account.findOne({ where: { email: params.email } })) { 
-        throw 'Email"' + parans.email + '" is already registered';
-}
-    const account = new db.Account (params);
-    account.verified = Date.now();
+  // Check if the email is already registered
+  const existingAccount = await db.Account.findOne({ where: { email: params.email } });
+  if (existingAccount) {
+      throw `Email "${params.email}" is already registered`;
+  }
 
-    account.passwordHash = await hash (params.password);
-  
-    return basicDetails (account);
+  const account = new db.Account(params);
+  account.verified = Date.now();
+  account.passwordHash = await hash(params.password);
+
+  // Set the user role
+  const totalAccountCount = await db.Account.count();
+  account.role = totalAccountCount === 0 ? Role.Admin : Role.User;
+
+  // Save the account
+  await account.save();
+
+  // Create default preferences for the new user
+  await db.Preferences.create({
+      AccountId: account.id,
+      theme: 'light',
+      notifications: true,
+      language: 'en'
+  });
+
+  // Return the basic details of the created account
+  return basicDetails(account);
 }
 async function update(id, params, ipAddress, browserInfo) {
   const account = await getAccount(id);
@@ -413,7 +436,7 @@ async function sendAlreadyRegisteredEmail(email, origin) {
 async function sendPasswordResetEmail (account, origin) {
     let message;
     if (origin) {
-        const reseturl = `${origin}/account/reset-password?token=${account.resetToken}`;
+        const resetUrl = `${origin}/account/reset-password?token=${account.resetToken}`;
         message = `<p>Please click the below link to reset your password, the link will be valid for 1 day:</p>
                    <p><a href="${resetUrl}">${resetUrl}</a></p>`;
     } else {

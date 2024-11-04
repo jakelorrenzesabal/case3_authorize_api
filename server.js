@@ -6,6 +6,10 @@ const errorHandler = require('_middleware/error-handler');
 const path = require('path');
 const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser');
+// Configure CORS once with specific options
+// specify the frontend origin
+// allow cookies and other credentials to be sent
+app.use(cors({origin: 'http://localhost:4200', credentials: true }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

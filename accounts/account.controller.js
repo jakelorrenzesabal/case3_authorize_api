@@ -197,15 +197,16 @@ function getAll(req, res, next) {
         .then (accounts => res.json (accounts))
         .catch(next);
 }
-    function getById(req, res, next) {
-        if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
-            return res.status(401).json({ message: 'Unauthorized' });
-        }
-        
-        accountService.getById(req.params.id)
-            .then(account => account ? res.json (account): res.sendStatus (404)) 
-            .catch(next);
-    }   
+function getById(req, res, next) {
+    // Check if the user is trying to access their own account or is an admin
+    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
+        return res.status(403).json({ message: 'Access to other user\'s data is forbidden' });
+    }
+    
+    accountService.getById(req.params.id)
+        .then(account => account ? res.json(account) : res.sendStatus(404)) 
+        .catch(next);
+}
 function createSchema (req, res, next) {
     const schema = Joi.object({
         title: Joi.string().required(), 
