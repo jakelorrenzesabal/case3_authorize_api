@@ -7,6 +7,7 @@ const Role = require('_helpers/role');
 const accountService = require('./account.service');
 
 router.post('/authenticate', authenticateSchema, authenticate);
+router.post('/logout', authorize(), logout); // New logout route
 router.post('/refresh-token', refreshToken);
 router.post('/revoke-token', authorize(), revokeTokenSchema, revokeToken); 
 router.post('/register', registerSchema, register);
@@ -48,6 +49,28 @@ function authenticate(req, res, next) {
       })
       .catch(next);
   }
+  function logout(req, res, next) {
+    const token = req.cookies.refreshToken;
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const browserInfo = req.headers['user-agent'] || 'Unknown Browser';
+    
+    if (!token) {
+        return res.status(400).json({ 
+            success: false,
+            message: 'No refresh token provided' 
+        });
+    }
+
+    accountService.logout({ token, ipAddress, browserInfo, userId: req.user.id })
+        .then(() => {
+            res.clearCookie('refreshToken'); // Clear the refresh token cookie
+            res.json({ 
+                success: true,
+                message: 'Logout successful' 
+            });
+        })
+        .catch(next);
+}
 //===================Logging Function=======================================
 function getActivities(req, res, next) {
     const filters = {
@@ -174,15 +197,16 @@ function getAll(req, res, next) {
         .then (accounts => res.json (accounts))
         .catch(next);
 }
-    function getById(req, res, next) {
-        if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
-            return res.status(401).json({ message: 'Unauthorized' });
-        }
-        
-        accountService.getById(req.params.id)
-            .then(account => account ? res.json (account): res.sendStatus (404)) 
-            .catch(next);
-    }   
+function getById(req, res, next) {
+    // Check if the user is trying to access their own account or is an admin
+    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
+        return res.status(403).json({ message: 'Access to other user\'s data is forbidden' });
+    }
+    
+    accountService.getById(req.params.id)
+        .then(account => account ? res.json(account) : res.sendStatus(404)) 
+        .catch(next);
+}
 function createSchema (req, res, next) {
     const schema = Joi.object({
         title: Joi.string().required(), 

@@ -6,6 +6,10 @@ const errorHandler = require('_middleware/error-handler');
 const path = require('path');
 const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser');
+// Configure CORS once with specific options
+// specify the frontend origin
+// allow cookies and other credentials to be sent
+app.use(cors({origin: 'http://localhost:4200', credentials: true }));
 
 app.use(cors({
     origin: 'http://localhost:4200',
@@ -27,6 +31,10 @@ app.use('/api/branches', require('./branches/branch.controller'));
 app.use('/api/orders', require('./orders/order.controller'));
 app.use('/api/products', require('./products/product.controller'));
 app.use('/api/inventory', require('./inventories/inventory.controller'));
+
+app.use('/api/booking', require('./booking/booking.controller'));
+app.use('/api/room', require('./rooms/room.controller'));
+app.use('/api/payment', require('./payment/payment.controller'));
 
 //app.use('/api/products', express.static(path.join(__dirname, 'products')), require('./products/product.controller'));
 
