@@ -1,6 +1,7 @@
 const { expressjwt: jwt } = require('express-jwt');
 const { secret } = require('config.json');
 const db = require('_helpers/db');
+const Role = require('_helpers/role');
 
 module.exports = authorize;
 
@@ -22,57 +23,21 @@ function authorize(roles = []) {
         async (req, res, next) => {
             try {
                 const account = await db.Account.findByPk(req.auth.id);
-
                 if (!account) {
-                    return res.status(401).json({ 
-                        success: false,
-                        message: 'Account no longer exists' 
-                    });
+                    return res.status(401).json({ message: 'Account no longer exists' });
                 }
-
-                if (!account.isVerified) {
-                    return res.status(401).json({
-                        success: false,
-                        message: 'Account is not verified'
-                    });
-                }
-
-                // Attach basic user info to request
-                req.user = {
-                    id: account.id,
-                    role: account.role,
-                    email: account.email
-                };
-
-                // For routes with :id parameter, implement access control
-                if (req.params.id) {
-                    const requestedId = parseInt(req.params.id);
-                    const isAdmin = account.role === 'Admin';
-                    const isSelfAccess = requestedId === account.id;
-
-                    // Admin can access all records
-                    if (isAdmin) {
-                        next();
-                        return;
-                    }
-
-                    // Non-admin users can only access their own records
-                    if (!isSelfAccess) {
-                        return res.status(403).json({
-                            success: false,
-                            message: 'Access denied - You can only access your own records'
-                        });
-                    }
-                }
-
-                // Check role-based authorization if roles are specified
                 if (roles.length && !roles.includes(account.role)) {
-                    return res.status(403).json({
-                        success: false,
-                        message: 'Access denied - Insufficient role permissions'
-                    });
+                    return res.status(401).json({ message: 'Unauthorized - Insufficient role permissions' });
                 }
 
+                // authentication and authorization successful
+                // attach user and role to request object
+                req.user = {
+                    ...req.auth,
+                    role: account.role,
+                    BranchId: account.BranchId  // Make sure this is being set correctly
+                };
+                
                 // Add method to check if user owns a refresh token
                 const refreshTokens = await account.getRefreshTokens();
                 req.user.ownsToken = token => !!refreshTokens.find(x => x.token === token);
