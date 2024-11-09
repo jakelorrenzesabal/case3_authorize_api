@@ -19,13 +19,13 @@ module.exports = {
 async function getAllBranch() {
     // Only return active branches
     return await db.Branch.findAll({
-        where: { branchStatus: 'active' }
+       
     });
 }
 
 async function getBranchById(id) {
     const branch = await db.Branch.findByPk(id, {
-        where: { status: 'active' }, // Only retrieve active branches
+        where: { branchStatus: 'active' }, // Only retrieve active branches
         include: [{
             model: db.Account,
             attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
@@ -33,7 +33,6 @@ async function getBranchById(id) {
         }]
     });
     if (!branch) throw 'Branch not found or is deactivated';
-    await checkIfActive(branch);
     return branch;
 }
 
@@ -61,8 +60,7 @@ async function updateBranch(id, params) {
 
 async function _deleteBranch(id) {
     const branch = await getBranchById(id);
-    branch.branchStatus = 'deactivated'; // Soft delete by updating status
-    await branch.save();
+    await branch.destroy();
 }
 
 async function getBranch(id) {
@@ -73,10 +71,10 @@ async function getBranch(id) {
     return branch;
 }
 
-async function assignUser(branchId, AccountId) {
+async function assignUser(BranchId, AccountId) {
     try {
         // First, check if the branch is active
-        const branch = await getBranch(branchId);
+        const branch = await getBranch(BranchId);
         
         const account = await db.Account.findByPk(AccountId);
         

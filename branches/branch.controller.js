@@ -7,7 +7,7 @@ const authorize = require('_middleware/authorize');
 const Role = require('_helpers/role');
 
 router.get('/', authorize (Role. Admin),getAllBranch);
-router.get('/:id',authorize(['Admin','User']),getBranchById);
+router.get('/:id',authorize(),getBranchById);
 router.delete('/:id', authorize (Role. Admin), _deleteBranch);
 router.post('/create', authorize (Role. Admin),createBranchSchema, createBranch);
 
@@ -17,10 +17,7 @@ router.post('/:id/remove/:AccountId', authorize (Role. Admin),removeUserFromBran
 
 router.put('/:id/deactivate', authorize (Role. Admin), deactivateBranch);
 router.put('/:id/reactivate', authorize (Role. Admin), reactivateBranch);
-
 // New routes with validation
-
-
 
 router.put('/:id/role', authorize (Role. Admin), updateRoleSchema, updateRole);
 
@@ -35,13 +32,15 @@ function getAllBranch(req, res, next) {
 }
 
 function getBranchById(req, res, next) {
-    // If the user is not an admin, ensure they're only accessing their own data
-    if (req.user.role !== 'Admin' && parseInt(req.params.id) !== req.user.id) {
-        return res.status(403).json({ message: 'Access denied' });
+    const branchId = req.params.id;
+
+    // Check if the user is an admin or assigned to the branch
+    if (req.user.role !== Role.Admin && req.user.BranchId !== Number(branchId)) {
+        return res.status(403).json({ message: 'Access to this branch is forbidden' });
     }
 
-    branchService.getBranchById(req.params.id)
-        .then(branch => res.json(branch))
+    branchService.getBranchById(branchId)
+        .then(branch => branch ? res.json(branch) : res.sendStatus(404))
         .catch(next);
 }
 
