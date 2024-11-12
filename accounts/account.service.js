@@ -243,10 +243,6 @@ async function create(params) {
   account.verified = Date.now();
   account.passwordHash = await hash(params.password);
 
-  // Set the user role
-  const totalAccountCount = await db.Account.count();
-  account.role = totalAccountCount === 0 ? Role.Admin : Role.User;
-
   // Save the account
   await account.save();
 
