@@ -7,7 +7,7 @@ const authorize = require('_middleware/authorize');
 const Role = require('_helpers/role');
 
 router.get('/', authorize (Role. Admin),getAllBranch);
-router.get('/:id',authorize(),getBranchById);
+router.get('/:id',authorize([Role.Admin,Role.Manager]),getBranchById);
 router.delete('/:id', authorize (Role. Admin), _deleteBranch);
 router.post('/create', authorize (Role. Admin),createBranchSchema, createBranch);
 
