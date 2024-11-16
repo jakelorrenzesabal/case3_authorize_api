@@ -1,38 +1,35 @@
 const db = require('_helpers/db');
+const { Sequelize } = require('sequelize');
 
 module.exports = {
     processPayment,
     checkPaymentStatus
 };
 
-// Initiate a payment for a booking
-async function processPayment(userId, { bookingId, amount }) {
-    const booking = await db.Booking.findOne({ where: { id: bookingId, userId } });
-    if (!booking || booking.status !== 'confirmed') throw new Error('Invalid booking for payment');
+async function processPayment(orderId, paymentDetails) {
+    const order = await db.Order.findByPk(orderId);
+    if (!order) throw 'Order not found';
 
-    // Create payment record
-    const payment = await db.Payment.create({
-        bookingId: booking.id,
-        amount,
-        status: 'pending'
+    const payment = new db.Payment({
+        orderId: order.id,
+        paymentMethod: paymentDetails.paymentMethod,
+        paymentStatus: 'completed'
     });
 
-    // Here you would initiate the payment with a payment gateway
-    // Example: const paymentResult = await paymentGateway.charge(amount);
-
-    payment.status = 'completed';  // For demonstration, mark as completed
     await payment.save();
+
+    order.orderStatus = 'processed';
+    await order.save();
 
     return payment;
 }
 
-// Check the status of a payment
 async function checkPaymentStatus(paymentId, userId) {
     const payment = await db.Payment.findOne({
         where: { id: paymentId },
         include: {
-            model: db.Booking,
-            where: { userId }  // Ensure the payment belongs to the user
+            model: db.Order,
+            where: { userId }
         }
     });
 

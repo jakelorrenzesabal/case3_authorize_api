@@ -27,6 +27,13 @@ async function getOrderById(id) {
 
 async function createOrder(params) {
     const order = new db.Order(params);
+
+    if (params.orderType === 'walk-in') {
+        order.orderStatus = 'processing';
+    } else if (params.orderType === 'online') {
+        order.orderStatus = 'pending';
+    }
+
     await order.save();
     return order;
 }
@@ -35,6 +42,8 @@ async function updateOrder(id, params) {
     const order = await db.Order.findByPk(id);
     if (!order) throw 'Order not found';
     if (order.orderStatus === 'cancelled') throw 'Cannot update a cancelled order';
+
+    order.orderStatus = params;
 
     Object.assign(order, params);
     await order.save();

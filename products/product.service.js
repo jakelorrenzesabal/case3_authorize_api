@@ -1,4 +1,6 @@
 const db = require('_helpers/db');
+const { generateSKU } = require('../_helpers/skuGenerator');
+const { Sequelize } = require('sequelize');
 
 module.exports = {
     getProduct,
@@ -12,6 +14,7 @@ module.exports = {
 async function getProduct() {
     return await db.Product.findAll({ where: { productStatus: 'active' } });
 }
+
 async function getProductById(id) {
     const product = await db.Product.findByPk(id);
 
@@ -24,36 +27,33 @@ async function getProductById(id) {
     await checkIfActive(product);
     return product;
 }
+
 async function createProduct(params) {
     let product = await db.Product.findOne({ where: { name: params.name } });
 
     if (product) {
-        // await checkIfActive(product);
-        // Product exists, update the inventory quantity
         const inventory = await db.Inventory.findOne({ where: { productId: product.id } });
         
         if (inventory) {
-            inventory.quantity += params.quantity || 1; // Increase the quantity by the given value or by 1 if not specified
+            inventory.quantity += params.quantity || 1;
             await inventory.save();
         } else {
-            // If no inventory exists for the product, create it (this should generally not happen if managed correctly)
             await db.Inventory.createProduct({
                 productId: product.id,
                 quantity: params.quantity || 1
             });
-        }
+        } 
 
         return { message: 'Product already exists, inventory updated', product };
     } else {
-        // Product doesn't exist, create a new product
         product = await db.Product.create({
             name: params.name,
             description: params.description,
             price: params.price,
+            quantity: params.quantity,
             productStatus: 'active'
         });
 
-        // Create inventory for the new product
         await db.Inventory.create({
             productId: product.id,
             quantity: params.quantity || 1
@@ -62,6 +62,7 @@ async function createProduct(params) {
         return { message: 'New product created', product };
     }
 }
+
 async function updateProduct(id, params) {
     const product = await getProductById(id);
     if (!product) throw 'Product not found';
@@ -81,7 +82,6 @@ async function deactivate(id) {
     product.productStatus = 'deactivated';
     await product.save();
 }
-
 async function reactivate(id) {
     const product = await getProductById(id);
     if (!product) throw 'Product not found';

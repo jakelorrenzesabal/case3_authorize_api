@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
-const orderService = require('./order.service');
-const authorize = require('_middleware/authorize');
+const orderService = require('../orders/order.service');
+const paymentService = require('../payment//payment.service');
 const validateRequest = require('_middleware/validate-request');
+const authorize = require('_middleware/authorize');
 const Role = require('_helpers/role');
 
 router.get('/', authorize([Role.Admin, Role.Manager]), getAllOrders);
@@ -35,14 +36,16 @@ function createOrder(req, res, next) {
 }
 function createOrderSchema(req, res, next) {
     const schema = Joi.object({
-        orderProduct: Joi.string().required().max(500),
+        customerId: Joi.number().required(),
+        productId: Joi.number().required(),
         totalAmount: Joi.number().positive().required(),
-        shippingAddress: Joi.string().required().max(500)
+        shippingAddress: Joi.string().required().max(500),
+        salesChannel: Joi.string().valid('walk-in', 'online').optional(),
+        paymentMethod: Joi.string().valid('cash', 'card', 'digitalWallet').optional(),
     });
     validateRequest(req, next, schema);
 }
 
-// Validation schema for updating an order
 function updateOrderSchema(req, res, next) {
     const schema = Joi.object({
         orderProduct: Joi.string().max(500).optional(),
@@ -80,6 +83,26 @@ function shipOrder(req, res, next) {
 function deliverOrder(req, res, next) {
     orderService.deliverOrder(req.params.id)
         .then(() => res.json({ message: 'Order delivered' }))
+        .catch(next);
+}
+
+router.post('/:id/pay', processPayment);
+router.put('/:id/status', updateOrderStatus);
+
+function processPayment(req, res, next) {
+    const { paymentMethod, customerId } = req.body;
+    paymentService.processPayment(req.params.id, { paymentMethod, customerId })
+        .then(payment => res.json(payment))
+        .catch(next);
+}
+
+function updateOrderStatus(req, res, next) {
+    const { status } = req.body;
+    orderService.updateOrderStatus(req.params.id, orderStatus)
+        .then(order => {
+            notifyCustomer(order.id, `Your order is now ${orderStatus}`);
+            res.json(order);
+        })
         .catch(next);
 }
 

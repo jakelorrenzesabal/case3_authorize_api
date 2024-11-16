@@ -14,7 +14,6 @@
 
         const sequelize = new Sequelize(database, user, password, { host: 'localhost', dialect: 'mysql' });
 
-    // Initialize models and add them to the exported `db` object
     db.User = require('../users/user.model')(sequelize);
     db.Order = require('../orders/order.model')(sequelize);
     db.Preferences = require('../models/preferences.model')(sequelize);  
@@ -24,42 +23,9 @@
     db.Account = require('../accounts/account.model')(sequelize);
     db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
     db.ActivityLog = require('../models/activitylog.model')(sequelize);
-
-    // Define associations
-    db.Product.hasOne(db.Inventory, { as: 'inventory', foreignKey: 'productId' });
-    db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
-
-    db.Branch.hasMany(db.Account, { onDelete: 'CASCADE' });
-    db.Account.belongsTo(db.Branch);
-
-    db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
-    db.RefreshToken.belongsTo(db.Account);
-
-    db.ActivityLog.belongsTo(db.Account, { foreignKey: 'AccountId' });
-    db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
-    
-//=============================================================
-    db.Booking = require('../booking/booking.model')(sequelize);
-    db.Room = require('../rooms/room.model')(sequelize);
     db.Payment = require('../payment/payment.model')(sequelize);
-
-    db.Warehouse = require('../models/warehouse.model')(sequelize);
-    db.Store = require('../models/store.model')(sequelize);
-
-        // db.User.hasMany(db.Booking, { foreignKey: 'userId' });
-        // db.Booking.belongsTo(db.User, { foreignKey: 'userId' });
-        // db.Room.hasMany(db.Booking, { foreignKey: 'roomId' });
-        // db.Booking.belongsTo(db.Room, { foreignKey: 'roomId' });
-
-        // db.Booking.hasOne(db.Payment, { foreignKey: 'bookingId' });
-        // db.Payment.belongsTo(db.Booking, { foreignKey: 'bookingId' });
-
-
-        // db.Warehouse.hasMany(db.Inventory, { foreignKey: 'warehouseId' });
-        // db.Inventory.belongsTo(db.Warehouse);
-
-        // db.Store.hasMany(db.Inventory, { foreignKey: 'storeId' });
-        // db.Inventory.belongsTo(db.Store);
+    db.Customer = require('../customers/customer.model')(sequelize);
+    //db.Transfer = require('../transfers/transfer.model')(sequelize);
 
         defineAssociations();
 
@@ -67,13 +33,17 @@
 } 
 
 function defineAssociations() {
-    db.Warehouse.hasMany(db.Inventory, { foreignKey: 'warehouseId' });
-    db.Inventory.belongsTo(db.Warehouse, { foreignKey: 'warehouseId' });
 
-    db.Store.hasMany(db.Inventory, { foreignKey: 'storeId' });
-    db.Inventory.belongsTo(db.Store, { foreignKey: 'storeId' });
+    db.Branch.hasMany(db.Account, { onDelete: 'CASCADE' });
+    db.Account.belongsTo(db.Branch);
 
-    db.Product.hasOne(db.Inventory, { /* as: 'inventory', */ foreignKey: 'productId' });
+    db.Account.hasMany(db.RefreshToken, { onDelete: 'CASCADE' });
+    db.RefreshToken.belongsTo(db.Account);
+
+    db.ActivityLog.belongsTo(db.Account, { foreignKey: 'AccountId' });
+    db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
+
+    db.Product.hasOne(db.Inventory, { foreignKey: 'productId' });
     db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
 
     db.Branch.hasMany(db.Account, { onDelete: 'CASCADE' });
@@ -85,11 +55,20 @@ function defineAssociations() {
     db.ActivityLog.belongsTo(db.Account, { foreignKey: 'AccountId' });
     db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
 
-    db.User.hasMany(db.Booking, { foreignKey: 'userId' });
-    db.Booking.belongsTo(db.User, { foreignKey: 'userId' });
-    db.Room.hasMany(db.Booking, { foreignKey: 'roomId' });
-    db.Booking.belongsTo(db.Room, { foreignKey: 'roomId' });
+    db.Customer.hasMany(db.Order, { foreignKey: 'customerId' });
+    db.Order.belongsTo(db.Customer, { foreignKey: 'customerId' });
 
-    db.Booking.hasOne(db.Payment, { foreignKey: 'bookingId' });
-    db.Payment.belongsTo(db.Booking, { foreignKey: 'bookingId' });
+    // db.Transfer.hasOne(db.Inventory, { foreignKey: 'transferId' });
+    // db.Inventory.belongsTo(db.Transfer, { foreignKey: 'transferId' });
+
+    // db.Transfer.belongsTo(db.Product, { foreignKey: 'productId' });
+    // db.Transfer.belongsTo(db.Account, { foreignKey: 'accountId' });
+
+    db.Product.hasMany(db.Order, { foreignKey: 'productId' });
+    db.Order.belongsTo(db.Product, { foreignKey: 'productId' });
+
+    db.Customer.hasMany(db.Order, { foreignKey: 'customerId', onDelete: 'CASCADE' });
+    db.Order.belongsTo(db.Customer, { foreignKey: 'customerId' });
+    db.Order.hasOne(db.Payment, { foreignKey: 'orderId', onDelete: 'CASCADE' });
+    db.Payment.belongsTo(db.Order, { foreignKey: 'orderId' });
 }

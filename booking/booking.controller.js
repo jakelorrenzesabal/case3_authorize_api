@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
-const authorize = require('_middleware/authorize');
-const Role = require('_helpers/role');
+//const authorize = require('_middleware/authorize');
+//const Role = require('_helpers/role');
 const bookingService = require('./booking.service');
 const validateRequest = require('_middleware/validate-request');
 

@@ -12,7 +12,6 @@ router.get('/:id', authorize([Role.Admin, Role.Manager, Role.User]), getProductB
 router.post('/', authorize([Role.Admin, Role.Manager]), createProductSchema, createProduct);
 router.put('/:id', authorize([Role.Admin, Role.Manager]), updateProductSchema, updateProduct);
 router.get('/:productId/availability', authorize([Role.User]),  checkAvailability);
-
 router.put('/:id/deactivate', authorize([Role.Admin, Role.Manager]), deactivateProduct);
 router.put('/:id/reactivate', authorize([Role.Admin, Role.Manager]), reactivateProduct);
 
@@ -33,17 +32,17 @@ function createProduct(req, res, next) {
         .then(() => res.json({ message: 'Product created' }))
         .catch(next);
 }
-// Schema validation middleware
 function createProductSchema(req, res, next) {
     const schema = Joi.object({
-        name: Joi.string().required().min(3).max(100),
-        description: Joi.string().required().min(3).max(100),
+        name: Joi.string().required().min(1).max(100),
+        description: Joi.string().required().min(1).max(100),
+        SKU: Joi.string().optional().max(50),
         price: Joi.number().required().min(0),
-        quantity: Joi.number().integer().min(0)
+        quantity: Joi.number().integer().min(0),
+        category: Joi.string().optional().max(50)
     });
     validateRequest(req, next, schema);
 }
-
 function updateProductSchema(req, res, next) {
     const schema = Joi.object({
         name: Joi.string().min(3).max(100).empty(''),
@@ -63,13 +62,11 @@ function deactivateProduct(req, res, next) {
         .then(() => res.json({ message: 'Product deactivated successfully' }))
         .catch(next); // Pass error to errorHandler
 }
-
 function reactivateProduct(req, res, next) {
     productService.reactivate(req.params.id)
         .then(() => res.json({ message: 'Product reactivated successfully' }))
         .catch(next); // Pass error to errorHandler
 }
-// Modified checkAvailability function
 async function checkAvailability(req, res, next) {
     const productId = req.params.productId;
 
