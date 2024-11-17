@@ -26,9 +26,22 @@ async function getOrderById(id) {
 }
 
 async function createOrder(params) {
+    // Validate that the AccountId exists
+    const account = await db.Account.findByPk(params.AccountId);
+    if (!account) throw 'Account not found';
+
     const order = new db.Order(params);
     await order.save();
-    return order;
+    
+    // Fetch the order with account details
+    const createdOrder = await db.Order.findByPk(order.id, {
+        include: [{
+            model: db.Account,
+            attributes: ['id', 'email'] // Only include safe account fields
+        }]
+    });
+    
+    return createdOrder;
 }
 
 async function updateOrder(id, params) {
