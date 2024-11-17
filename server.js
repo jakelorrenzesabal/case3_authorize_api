@@ -23,7 +23,7 @@ app.use(express.static(path.join(__dirname, 'products')));
 
 app.use('/api/users', require('./users/user.controller'));
 app.use('/branches', require('./branches/branch.controller'));
-app.use('/api/orders', require('./orders/order.controller'));
+app.use('/orders', require('./orders/order.controller'));
 app.use('/api/products', require('./products/product.controller'));
 app.use('/api/inventory', require('./inventories/inventory.controller'));
 

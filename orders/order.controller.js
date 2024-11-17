@@ -29,7 +29,13 @@ function getOrderById(req, res, next) {
         .catch(next);
 }
 function createOrder(req, res, next) {
-    orderService.createOrder(req.body)
+    // Add the AccountId from the authenticated user to the order data
+    const orderData = {
+        ...req.body,
+        AccountId: req.user.id  // req.user is set by the authorize middleware
+    };
+    
+    orderService.createOrder(orderData)
         .then(order => res.json(order))
         .catch(next);
 }

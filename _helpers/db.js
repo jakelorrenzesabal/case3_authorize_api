@@ -24,7 +24,8 @@
     db.Account = require('../accounts/account.model')(sequelize);
     db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
     db.ActivityLog = require('../models/activitylog.model')(sequelize);
-
+     
+    db.Order.belongsTo(db.Account, { foreignKey: 'AccountId' });
     // Define associations
     db.Product.hasOne(db.Inventory, { as: 'inventory', foreignKey: 'productId' });
     db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
