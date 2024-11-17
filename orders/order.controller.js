@@ -6,7 +6,7 @@ const authorize = require('_middleware/authorize');
 const validateRequest = require('_middleware/validate-request');
 const Role = require('_helpers/role');
 
-router.get('/', authorize([Role.Admin, Role.Manager]), getAllOrders);
+router.get('/', authorize([Role.Admin, Role.Manager, Role.User]), getAllOrders);
 router.get('/:id', authorize([Role.Admin, Role.Manager]), getOrderById);
 router.post('/', authorize([Role.User]), createOrderSchema, createOrder);
 router.put('/:id', authorize([Role.Admin, Role.Manager]), updateOrderSchema, updateOrder);
@@ -16,10 +16,12 @@ router.put('/:id/process', authorize([Role.Admin, Role.Manager]), processOrder);
 router.put('/:id/ship', authorize([Role.Admin, Role.Manager]), shipOrder);
 router.put('/:id/deliver', authorize([Role.Admin, Role.Manager]), deliverOrder);
 
+
 module.exports = router;
 
 function getAllOrders(req, res, next) {
-    orderService.getAllOrders()
+    const { role, id: accountId } = req.user; // Extract role and AccountId from authenticated user
+    orderService.getAllOrders(role, accountId)
         .then(orders => res.json(orders))
         .catch(next);
 }
@@ -69,7 +71,7 @@ function cancelOrder(req, res, next) {
         .catch(next);
 }
 function trackOrderStatus(req, res, next) {
-    orderService.trackOrderStatus(req.params.id)
+    orderService.trackOrderStatus(req.params.id, req.user.id) // Pass the authenticated user's ID
         .then(orderStatus => res.json({ orderStatus }))
         .catch(next);
 }

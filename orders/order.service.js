@@ -10,14 +10,27 @@ module.exports = {
     trackOrderStatus,
     processOrder,
     shipOrder,
-    deliverOrder,
+    deliverOrder
 };
 
-async function getAllOrders() {
+async function getAllOrders(role, accountId) {
+    const whereCondition = role === 'User'
+    ? {
+        AccountId: accountId, 
+        orderStatus: { [Sequelize.Op.not]: 'cancelled' } // Exclude cancelled orders for Users
+      }
+        : { orderStatus: ['pending', 'processing', 'shipped', 'delivered'] }; // Admins/Managers can view all orders
+
     return await db.Order.findAll({
-        where: {
-            orderStatus: ['pending', 'processing', 'shipped', 'delivered']
-        }
+        where: whereCondition,
+        attributes: ['id', 'orderProduct', 'totalAmount', 'orderStatus','shippingAddress','createdAt', 'AccountId'], // Include relevant fields
+        include: role !== 'User' // Include account details only for Admins/Managers
+            ? [{
+                model: db.Account,
+                attributes: ['id', 'email'],
+              }]
+            : [],
+        order: [['createdAt', 'DESC']], // Sort by most recent
     });
 }
 
@@ -83,9 +96,12 @@ async function cancelOrder(id) {
     return order;
 }
 
-async function trackOrderStatus(id) {
-    const order = await db.Order.findByPk(id, { attributes: ['orderStatus'] });
-    if (!order) throw 'Order not found';
+async function trackOrderStatus(id, accountId) {
+    const order = await db.Order.findOne({
+        where: { id, AccountId: accountId }, // Ensure the order belongs to the authenticated user
+        attributes: ['orderStatus'],
+    });
+    if (!order) throw 'Order not found or unauthorized access';
     return order.orderStatus;
 }
 
