@@ -43,7 +43,7 @@ function createOrder(req, res, next) {
 }
 function createOrderSchema(req, res, next) {
     const schema = Joi.object({
-        orderProduct: Joi.string().required().max(500),
+        productId: Joi.number().required(), // Add productId validation
         totalAmount: Joi.number().positive().required(),
         shippingAddress: Joi.string().required().max(500)
     });

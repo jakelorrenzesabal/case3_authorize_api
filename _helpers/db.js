@@ -26,6 +26,9 @@
     db.ActivityLog = require('../models/activitylog.model')(sequelize);
      
     db.Order.belongsTo(db.Account, { foreignKey: 'AccountId' });
+
+    db.Product.hasMany(db.Order, { foreignKey: 'productId' });
+    db.Order.belongsTo(db.Product, { foreignKey: 'productId' });
     // Define associations
     db.Product.hasOne(db.Inventory, { as: 'inventory', foreignKey: 'productId' });
     db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
@@ -40,5 +43,5 @@
     db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
 
 
-        await sequelize.sync({ force: false });
+        await sequelize.sync({ alter: true });
     } 
