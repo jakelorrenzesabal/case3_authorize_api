@@ -15,22 +15,26 @@ module.exports = {
 
 async function getAllOrders(role, accountId) {
     const whereCondition = role === 'User'
-    ? {
-        AccountId: accountId, 
-        orderStatus: { [Sequelize.Op.not]: 'cancelled' } // Exclude cancelled orders for Users
-      }
-        : { orderStatus: ['pending', 'processing', 'shipped', 'delivered'] }; // Admins/Managers can view all orders
+        ? {
+            AccountId: accountId,
+            orderStatus: { [Sequelize.Op.not]: 'cancelled' }
+          }
+        : { orderStatus: ['pending', 'processing', 'shipped', 'delivered'] };
 
     return await db.Order.findAll({
         where: whereCondition,
-        attributes: ['id', 'orderProduct', 'totalAmount', 'orderStatus','shippingAddress','createdAt', 'AccountId'], // Include relevant fields
-        include: role !== 'User' // Include account details only for Admins/Managers
-            ? [{
+        attributes: ['id', 'totalAmount', 'orderStatus', 'shippingAddress', 'createdAt', 'AccountId'],
+        include: [
+            ...(role !== 'User' ? [{
                 model: db.Account,
                 attributes: ['id', 'email'],
-              }]
-            : [],
-        order: [['createdAt', 'DESC']], // Sort by most recent
+            }] : []),
+            {
+                model: db.Product,
+                attributes: ['id', 'name', 'price'],
+            }
+        ],
+        order: [['createdAt', 'DESC']],
     });
 }
 
@@ -43,15 +47,21 @@ async function createOrder(params) {
     const account = await db.Account.findByPk(params.AccountId);
     if (!account) throw 'Account not found';
 
+    // Validate that the Product exists and is active
+    const product = await db.Product.findByPk(params.productId);
+    if (!product) throw 'Product not found';
+    if (product.productStatus !== 'active') throw 'Product is not available';
+
     const order = new db.Order(params);
     await order.save();
     
-    // Fetch the order with account details
+    // Fetch the order with account and product details
     const createdOrder = await db.Order.findByPk(order.id, {
-        include: [{
-            model: db.Account,
-            attributes: ['id', 'email'] // Only include safe account fields
-        }]
+        include: [
+            { model: db.Account, attributes: ['id', 'email']},
+            { model: db.Product,attributes: ['id', 'name', 'price']
+            }
+        ]
     });
     
     return createdOrder;
