@@ -100,7 +100,6 @@ async function cancelOrder(id) {
     if (product) {
         product.isAvailable = false;
         await product.save();
-        throw 'The product has been deactivated because the order was cancelled';
     }
 
     return order;
