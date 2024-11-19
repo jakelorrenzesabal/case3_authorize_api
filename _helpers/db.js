@@ -75,4 +75,11 @@ function defineAssociations() {
 
     // db.Inventory.hasMany(db.Product, { foreignKey: 'productId' });
     // db.Product.belongsTo(db.Inventory, { foreignKey: 'productId' });
+
+    db.Product.hasMany(db.Inventory, {foreignKey: 'productId' });
+    db.Product.belongsTo(db.Branch, { /* through: db.Inventory, */ foreignKey: 'productId', foreignKey: 'branchId' });
+    db.Inventory.belongsTo(db.Branch, { foreignKey: 'branchId' });
+    db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
+    db.Branch.hasMany(db.Inventory, { foreignKey: 'branchId' });
+    db.Branch.belongsTo(db.Product, { /* through: models.Inventory, */ foreignKey: 'branchId', foreignKey: 'productId' });
 }

@@ -6,6 +6,7 @@ function model(sequelize) {
     const attributes = {
         name: { type: DataTypes.STRING, allowNull: false },
         location: { type: DataTypes.STRING, allowNull: false },
+        //location: { type: DataTypes.ENUM('warehouse', 'store1', 'store2'), allowNull: false },
         branchStatus: { type: DataTypes.ENUM('active', 'deactivated'), allowNull: false, defaultValue: 'active'}
     };
 
