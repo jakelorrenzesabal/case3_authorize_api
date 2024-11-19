@@ -18,6 +18,8 @@ function model(sequelize) {
         passwordReset: { type: DataTypes.DATE},
         created: {type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }, 
         updated: { type: DataTypes.DATE },
+        phoneNumber: { type: DataTypes.STRING, allowNull: true },
+        loyaltyPoints: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
         isVerified: {
             type: DataTypes.VIRTUAL,
             get() { return !!(this.verified || this.passwordReset); }

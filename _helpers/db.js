@@ -44,8 +44,8 @@ function defineAssociations() {
     db.ActivityLog.belongsTo(db.Account, { foreignKey: 'AccountId' });
     db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
 
-    db.Product.hasOne(db.Inventory, { foreignKey: 'productId' });
-    db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
+    // db.Product.hasOne(db.Inventory, { foreignKey: 'productId' });
+    // db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
 
     db.Branch.hasMany(db.Account, { onDelete: 'CASCADE' });
     db.Account.belongsTo(db.Branch);
@@ -56,8 +56,8 @@ function defineAssociations() {
     db.ActivityLog.belongsTo(db.Account, { foreignKey: 'AccountId' });
     db.Preferences.belongsTo(db.Account, { foreignKey: 'AccountId' });
 
-    db.Customer.hasMany(db.Order, { foreignKey: 'customerId' });
-    db.Order.belongsTo(db.Customer, { foreignKey: 'customerId' });
+    // db.Customer.hasMany(db.Order, { foreignKey: 'customerId' });
+    // db.Order.belongsTo(db.Customer, { foreignKey: 'customerId' });
 
     // db.Transfer.hasOne(db.Inventory, { foreignKey: 'transferId' });
     // db.Inventory.belongsTo(db.Transfer, { foreignKey: 'transferId' });
@@ -73,6 +73,12 @@ function defineAssociations() {
     db.Order.hasOne(db.Payment, { foreignKey: 'orderId', onDelete: 'CASCADE' });
     db.Payment.belongsTo(db.Order, { foreignKey: 'orderId' });
 
-    // db.Inventory.hasMany(db.Product, { foreignKey: 'productId' });
-    // db.Product.belongsTo(db.Inventory, { foreignKey: 'productId' });
+    db.Branch.hasMany(db.Inventory, { foreignKey: 'branchId'/* , onDelete: 'CASCADE' */ });
+    db.Inventory.belongsTo(db.Branch, { foreignKey: 'branchId' });
+    
+    db.Product.hasMany(db.Inventory, { foreignKey: 'productId' });
+    db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
+
+    db.Account.hasMany(db.Order, { foreignKey: 'customerId' });
+    db.Order.belongsTo(db.Account, { foreignKey: 'customerId' });
 }

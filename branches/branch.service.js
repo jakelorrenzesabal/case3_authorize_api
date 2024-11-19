@@ -13,7 +13,9 @@ module.exports = {
     updateRole,
 
     deactivateBranch,
-    reactivateBranch
+    reactivateBranch,
+
+    getBranchesByType
 };
 
 async function getAllBranch() {
@@ -22,7 +24,6 @@ async function getAllBranch() {
         where: { branchStatus: 'active' }
     });
 }
-
 async function getBranchById(id) {
     const branch = await db.Branch.findByPk(id, {
         where: { status: 'active' }, // Only retrieve active branches
@@ -36,7 +37,6 @@ async function getBranchById(id) {
     await checkIfActive(branch);
     return branch;
 }
-
 async function createBranch(params) {
     const branch = new db.Branch(params);
 
@@ -46,7 +46,6 @@ async function createBranch(params) {
     branch.status = 'active'; // Ensure new branches are active
     await branch.save();
 }
-
 async function updateBranch(id, params) {
     const branch = await getBranchById(id);
     
@@ -58,13 +57,11 @@ async function updateBranch(id, params) {
     Object.assign(branch, params);
     await branch.save();
 }
-
 async function _deleteBranch(id) {
     const branch = await getBranchById(id);
     branch.branchStatus = 'deactivated'; // Soft delete by updating status
     await branch.save();
 }
-
 async function getBranch(id) {
     const branch = await db.Branch.findByPk(id, {
         where: { branchStatus: 'active' }
@@ -72,7 +69,6 @@ async function getBranch(id) {
     if (!branch) throw 'Branch not found or is deactivated';
     return branch;
 }
-
 async function assignUser(branchId, AccountId) {
     try {
         // First, check if the branch is active
@@ -149,7 +145,6 @@ async function removeUserFromBranch(branchId, AccountId) {
 
     return { message: 'User removed from branch successfully' };
 }
-
 async function deactivateBranch(id) {
     const branch = await getBranchById(id);
     if (!branch) throw 'Branch not found';
@@ -167,7 +162,6 @@ async function deactivateBranch(id) {
         { where: { BranchId: id } }
     );
 }
-
 async function reactivateBranch(id) {
     const branch = await db.Branch.findByPk(id);
     if (!branch) throw 'Branch not found';
@@ -179,9 +173,15 @@ async function reactivateBranch(id) {
     branch.branchStatus = 'active';
     await branch.save();
 }
-// Helper function to check if the product is active
 async function checkIfActive(branch) {
     if (branch.branchStatus === 'deactivated') {
         throw new Error('Product is deactivated');
     }
+}
+async function getBranchesByType(type) {
+    if (!['warehouse', 'store'].includes(type)) {
+        throw 'Invalid branch type';
+    }
+
+    return await db.Branch.findAll({ where: { type, branchStatus: 'active' } });
 }

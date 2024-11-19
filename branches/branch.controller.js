@@ -3,26 +3,23 @@ const router = express.Router();
 const Joi = require('joi');
 const branchService = require('./branch.service');
 const validateRequest = require('_middleware/validate-request');
-const authorize = require('_middleware/authorize');
-const Role = require('_helpers/role');
+// const authorize = require('_middleware/authorize');
+// const Role = require('_helpers/role');
 
-router.get('/', authorize (Role. Admin),getAllBranch);
-router.get('/:id',authorize(['Admin','User']),getBranchById);
-router.delete('/:id', authorize (Role. Admin), _deleteBranch);
-router.post('/create', authorize (Role. Admin),createBranchSchema, createBranch);
+router.get('/', /* authorize (Role. Admin), */getAllBranch);
+router.get('/:id',/* authorize(['Admin','User']), */getBranchById);
+router.delete('/:id', /* authorize (Role. Admin), */ _deleteBranch);
+router.post('/create', /* authorize (Role. Admin), */createBranchSchema, createBranch);
 
-router.put('/:id', authorize (Role. Admin), updateBranchSchema, updateBranch);
-router.post('/:id/assign/:AccountId', authorize (Role. Admin),assignUser);
-router.post('/:id/remove/:AccountId', authorize (Role. Admin),removeUserFromBranch);
+router.put('/:id', /* authorize (Role. Admin), */ updateBranchSchema, updateBranch);
+router.post('/:id/assign/:AccountId', /* authorize (Role. Admin), */assignUser);
+router.post('/:id/remove/:AccountId', /* authorize (Role. Admin), */removeUserFromBranch);
 
-router.put('/:id/deactivate', authorize (Role. Admin), deactivateBranch);
-router.put('/:id/reactivate', authorize (Role. Admin), reactivateBranch);
+router.put('/:id/deactivate', /* authorize (Role. Admin), */ deactivateBranch);
+router.put('/:id/reactivate', /* authorize (Role. Admin), */ reactivateBranch);
 
-// New routes with validation
-
-
-
-router.put('/:id/role', authorize (Role. Admin), updateRoleSchema, updateRole);
+router.put('/:id/role', /* authorize (Role. Admin), */ updateRoleSchema, updateRole);
+router.get('/type/:type', /* authorize(['Admin']), */ getBranchesByType);
 
 
 module.exports = router;
@@ -33,7 +30,6 @@ function getAllBranch(req, res, next) {
         .then(branches => res.json(branches))
         .catch(next);
 }
-
 function getBranchById(req, res, next) {
     // If the user is not an admin, ensure they're only accessing their own data
     if (req.user.role !== 'Admin' && parseInt(req.params.id) !== req.user.id) {
@@ -44,7 +40,6 @@ function getBranchById(req, res, next) {
         .then(branch => res.json(branch))
         .catch(next);
 }
-
 function createBranch(req, res, next) {
     branchService.createBranch(req.body)
         .then(() => res.json({ message: 'Branch created' }))
@@ -53,17 +48,16 @@ function createBranch(req, res, next) {
 function createBranchSchema(req, res, next) {
     const schema = Joi.object({
         name: Joi.string().required().min(3).max(100),
-        location: Joi.string().required().max(255)
+        location: Joi.string().required().max(255),
+        type: Joi.string().valid('warehouse', 'store')
     });
     validateRequest(req, next, schema);
 }
-
 function updateBranch(req, res, next) {
     branchService.updateBranch(req.params.id, req.body)
         .then(() => res.json({ message: 'Branch updated' }))
         .catch(next);
 }
-
 function updateBranchSchema(req, res, next) {
     const schema = Joi.object({
         name: Joi.string().min(3).max(100).empty(''),
@@ -71,7 +65,6 @@ function updateBranchSchema(req, res, next) {
     });
     validateRequest(req, next, schema);
 }
-
 //====================Update role route===============================================
 function updateRole(req, res, next) {
     branchService.update(req.params.id, req.body)
@@ -84,19 +77,16 @@ function updateRoleSchema(req, res, next) {
     })
     validateRequest(req, next, schema);
 }
-
 function _deleteBranch(req, res, next) {
     branchService.deleteBranch(req.params.id)
         .then(() => res.json({ message: 'Branch deleted' }))
         .catch(next);
 }
-
 function assignUser(req, res, next) {
     branchService.assignUser(req.params.id, req.params.AccountId)
         .then(() => res.json({ message: 'User assigned to branch' }))
         .catch(next);
 }
-
 function removeUserFromBranch(req, res, next) {
     branchService.removeUserFromBranch(req.params.id, req.params.AccountId)
         .then(() => res.json({ message: 'User removed from branch' }))
@@ -113,5 +103,11 @@ function deactivateBranch(req, res, next) {
 function reactivateBranch(req, res, next) {
     branchService.reactivateBranch(req.params.id)
         .then(() => res.json({ message: 'User reactivated successfully' }))
+        .catch(next);
+}
+
+function getBranchesByType(req, res, next) {
+    branchService.getBranchesByType(req.params.type)
+        .then(branches => res.json(branches))
         .catch(next);
 }

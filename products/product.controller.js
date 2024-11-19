@@ -48,8 +48,7 @@ function updateProductSchema(req, res, next) {
     const schema = Joi.object({
         name: Joi.string().min(3).max(100).empty(''),
         description: Joi.string().min(3).max(100).empty(''),
-        price: Joi.number().min(0).empty(''),
-        quantity: Joi.number().integer().min(0).empty('')
+        price: Joi.number().min(0).empty('')
     });
     validateRequest(req, next, schema);
 }

@@ -10,7 +10,7 @@ router.post('/authenticate', authenticateSchema, authenticate);
 router.post('/logout', authorize(), logout); // New logout route
 router.post('/refresh-token', refreshToken);
 router.post('/revoke-token', authorize(), revokeTokenSchema, revokeToken); 
-router.post('/register', registerSchema, register);
+router.post('/register/staff', registerStaffSchema, registerStaff);
 router.post('/verify-email', verifyEmailSchema, verifyEmail);
 router.post('/forgot-password', forgotPasswordSchema, forgotPassword);
 router.post('/validate-reset-token', validateResetTokenSchema, validateResetToken);
@@ -36,7 +36,6 @@ function authenticateSchema(req, res, next) {
 
     validateRequest(req, next, schema);
 }
-
 function authenticate(req, res, next) {
     const { email, password } = req.body;
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -48,7 +47,7 @@ function authenticate(req, res, next) {
         res.json(account);
       })
       .catch(next);
-  }
+}
   function logout(req, res, next) {
     const token = req.cookies.refreshToken;
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -123,7 +122,7 @@ function revokeToken (req, res, next) {
         .then(() =>res.json({ message: 'Token revoked' }))
         .catch(next);
 }
-function registerSchema(req, res, next) {
+function registerStaffSchema(req, res, next) {
     const schema = Joi.object({
         title: Joi.string().required(),
         firstName: Joi.string().required(), 
@@ -135,7 +134,7 @@ function registerSchema(req, res, next) {
     });
     validateRequest(req, next, schema);
 }
-function register(req, res, next) {
+function registerStaff(req, res, next) {
     accountService.register(req.body, req.get('origin'))
         .then(() => res.json({ message: 'Registration successful, please check your email for verification instructions' })) 
         .catch(next);
@@ -191,7 +190,7 @@ function resetPassword(req, res, next) {
         res.json({ message: 'Password reset successful, you can now login' });
       })
       .catch(next);
-  }
+}
 function getAll(req, res, next) {
     accountService.getAll()
         .then (accounts => res.json (accounts))
@@ -277,4 +276,52 @@ function setTokenCookie(res, token) {
         expires: new Date(Date.now() + 7*24*60*60*1000)
     };
     res.cookie('refreshToken', token, cookieOptions);
+}
+
+
+router.post('/register/customer', registerCustomerSchema, registerCustomer);
+router.get('/customer/:id', /* authorize([Role.Admin, Role.Staff]), */ getCustomerById);
+router.put('/:id/points', /* authorize([Role.Admin]), */ updateLoyaltyPoints);
+router.get('/:id/orderHistory', /* authorize([Role.Admin]), */ getCustomerOrderHistory);
+
+function registerCustomerSchema(req, res, next) {
+    const schema = Joi.object({
+        firstName: Joi.string().required(),
+        lastName: Joi.string().required(),
+        email: Joi.string().email().required(),
+        phoneNumber: Joi.string().required(),
+        loyaltyPoints: Joi.number().optional(),
+    });
+    validateRequest(req, next, schema);
+}
+function registerCustomer(req, res, next) {
+    const customerParams = {
+        ...req.body,
+        role: 'User', // Ensure the role is set to 'User'
+        password: 'defaultPassword123', // Optional: Set a default password for customers
+    };
+
+    accountService
+        .register(customerParams, req.get('origin'))
+        .then(() =>
+            res.json({
+                message: 'Customer registered successfully. Please check email for login details.',
+            })
+        )
+        .catch(next);
+}
+function getCustomerById(req, res, next) {
+    customerService.getCustomerById(req.params.id)
+        .then(customer => res.json(customer))
+        .catch(next);
+}
+function updateLoyaltyPoints(req, res, next) {
+    customerService.updateLoyaltyPoints(req.params.id, req.body.points)
+        .then(() => res.json({ message: 'Loyalty points updated' }))
+        .catch(next);
+}
+function getCustomerOrderHistory(req, res, next) {
+    customerService.getCustomerOrderHistory(req.params.id)
+        .then(orders => res.json(orders))
+        .catch(next);
 }

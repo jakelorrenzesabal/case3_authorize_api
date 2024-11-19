@@ -25,7 +25,11 @@ module.exports = {
     update,
     updatePreferences,
     getPreferences,
-    delete: _delete
+    delete: _delete,
+
+    getCustomerById,
+    updateLoyaltyPoints,
+    getCustomerOrderHistory
 };
 
 async function authenticate({ email, password, ipAddress, browserInfo }) {
@@ -267,13 +271,11 @@ async function resetPassword({ token, password }, ipAddress, browserInfo) {
     }
   
     return;
-  }
-
+}
 async function getAll() {
     const accounts = await db.Account.findAll(); 
     return accounts.map(x => basicDetails(x));
 }
-
 async function getById(id) {
     const account = await getAccount(id); 
     return basicDetails (account);
@@ -450,5 +452,21 @@ async function sendPasswordResetEmail (account, origin) {
     html: `<h4>Reset Password Email</h4>
           ${message}`
     });
+}
+
+
+async function getCustomerById(id) {
+  return await db.Customer.findByPk(id, { include: db.Order } );
+}
+async function updateLoyaltyPoints(customerId, points) {
+  const customer = await db.Customer.findByPk(customerId);
+  customer.loyaltyPoints += points;
+  return await customer.save();
+}
+async function getCustomerOrderHistory(id) {
+  return await db.Order.findAll({
+      where: { id },
+      order: [['createdAt', 'DESC']],
+  });
 }
     

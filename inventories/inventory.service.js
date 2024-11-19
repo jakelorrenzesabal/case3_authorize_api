@@ -10,8 +10,9 @@ module.exports = {
     transferProduct
 };
 
-async function getInventory() {
+async function getInventory(branchId) {
     return await db.Inventory.findAll({ 
+        where: { branchId },
         //include: db.Product 
     });
 }
@@ -68,32 +69,49 @@ async function checkStockLevels() {
     });
 }
 async function transferProduct(productId, quantity, sourceLocation, targetLocation, userId) {
-    const sourceInventory = await db.Inventory.findOne({
-        where: { productId, locationType: sourceLocation }
-    });
+    // const sourceInventory = await db.Inventory.findOne({
+    //     where: { productId, locationType: sourceLocation }
+    // });
+    // if (!sourceInventory || sourceInventory.quantity < quantity) {
+    //     throw new Error(`Insufficient stock in ${sourceLocation}`);
+    // }
+
+    // sourceInventory.quantity -= quantity;
+    // await sourceInventory.save();
+
+    // let targetInventory = await db.Inventory.findOne({
+    //     where: { productId, locationType: targetLocation }
+    // });
+    // if (targetInventory) {
+    //     targetInventory.quantity += quantity;
+    // } else {
+    //     targetInventory = await db.Inventory.create({
+    //         productId,
+    //         locationType: targetLocation,
+    //         quantity
+    //     });
+    // }
+    
+    // await targetInventory.save();
+
+    //await logTransaction('stock_transfer', userId, `Transferred ${quantity} units of product ${productId} from ${sourceLocation} to ${targetLocation}`);
+
+    const sourceInventory = await db.Inventory.findOne({ where: { productId, branchId: sourceBranchId } });
+    const targetInventory = await db.Inventory.findOne({ where: { productId, branchId: targetBranchId } });
+
     if (!sourceInventory || sourceInventory.quantity < quantity) {
-        throw new Error(`Insufficient stock in ${sourceLocation}`);
+        throw 'Insufficient stock at source branch';
     }
 
+    // Update stock levels
     sourceInventory.quantity -= quantity;
     await sourceInventory.save();
 
-    let targetInventory = await db.Inventory.findOne({
-        where: { productId, locationType: targetLocation }
-    });
     if (targetInventory) {
         targetInventory.quantity += quantity;
     } else {
-        targetInventory = await db.Inventory.create({
-            productId,
-            locationType: targetLocation,
-            quantity
-        });
+        await db.Inventory.create({ productId, branchId: targetBranchId, quantity });
     }
-    
-    await targetInventory.save();
-
-    //await logTransaction('stock_transfer', userId, `Transferred ${quantity} units of product ${productId} from ${sourceLocation} to ${targetLocation}`);
 
     return { 
         message: `Product transferred successfully from ${sourceLocation} to ${targetLocation} by ${userId}`,
