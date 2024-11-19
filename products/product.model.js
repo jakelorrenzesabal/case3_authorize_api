@@ -4,7 +4,7 @@ module.exports = (sequelize) => {
     const attributes = {
         name: { type: DataTypes.STRING, allowNull: false },
         description: { type: DataTypes.STRING, allowNull: true },
-        price: { type: DataTypes.FLOAT, allowNull: false },
+        price: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
         productStatus: { type: DataTypes.ENUM('deactivated', 'active'), allowNull: false, defaultValue: 'active'}
     };
 

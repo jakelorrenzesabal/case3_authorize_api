@@ -10,14 +10,31 @@ module.exports = {
     trackOrderStatus,
     processOrder,
     shipOrder,
-    deliverOrder,
+    deliverOrder
 };
 
-async function getAllOrders() {
+async function getAllOrders(role, accountId) {
+    const whereCondition = role === 'User'
+        ? {
+            AccountId: accountId,
+            orderStatus: { [Sequelize.Op.not]: 'cancelled' }
+          }
+        : { orderStatus: ['pending', 'processing', 'shipped', 'delivered'] };
+
     return await db.Order.findAll({
-        where: {
-            orderStatus: ['pending', 'processing', 'shipped', 'delivered']
-        }
+        where: whereCondition,
+        attributes: ['id', 'totalAmount', 'orderStatus', 'shippingAddress', 'createdAt', 'AccountId'],
+        include: [
+            ...(role !== 'User' ? [{
+                model: db.Account,
+                attributes: ['id', 'email'],
+            }] : []),
+            {
+                model: db.Product,
+                attributes: ['id', 'name', 'price'],
+            }
+        ],
+        order: [['createdAt', 'DESC']],
     });
 }
 
@@ -26,9 +43,28 @@ async function getOrderById(id) {
 }
 
 async function createOrder(params) {
+    // Validate that the AccountId exists
+    const account = await db.Account.findByPk(params.AccountId);
+    if (!account) throw 'Account not found';
+
+    // Validate that the Product exists and is active
+    const product = await db.Product.findByPk(params.productId);
+    if (!product) throw 'Product not found';
+    if (product.productStatus !== 'active') throw 'Product is not available';
+
     const order = new db.Order(params);
     await order.save();
-    return order;
+    
+    // Fetch the order with account and product details
+    const createdOrder = await db.Order.findByPk(order.id, {
+        include: [
+            { model: db.Account, attributes: ['id', 'email']},
+            { model: db.Product,attributes: ['id', 'name', 'price']
+            }
+        ]
+    });
+    
+    return createdOrder;
 }
 
 async function updateOrder(id, params) {
@@ -70,9 +106,12 @@ async function cancelOrder(id) {
     return order;
 }
 
-async function trackOrderStatus(id) {
-    const order = await db.Order.findByPk(id, { attributes: ['orderStatus'] });
-    if (!order) throw 'Order not found';
+async function trackOrderStatus(id, accountId) {
+    const order = await db.Order.findOne({
+        where: { id, AccountId: accountId }, // Ensure the order belongs to the authenticated user
+        attributes: ['orderStatus'],
+    });
+    if (!order) throw 'Order not found or unauthorized access';
     return order.orderStatus;
 }
 

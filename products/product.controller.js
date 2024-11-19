@@ -13,8 +13,8 @@ router.post('/', authorize([Role.Admin, Role.Manager]), createProductSchema, cre
 router.put('/:id', authorize([Role.Admin, Role.Manager]), updateProductSchema, updateProduct);
 router.get('/:productId/availability', authorize([Role.User]),  checkAvailability);
 
-router.put('/:id/deactivate', authorize([Role.Admin, Role.Manager]), deactivateProduct);
-router.put('/:id/reactivate', authorize([Role.Admin, Role.Manager]), reactivateProduct);
+router.put('/:id/deactivateProduct', authorize([Role.Admin, Role.Manager]), deactivateProduct);
+router.put('/:id/reactivateProduct', authorize([Role.Admin, Role.Manager]), reactivateProduct);
 
 module.exports = router;
 
@@ -49,7 +49,8 @@ function updateProductSchema(req, res, next) {
         name: Joi.string().min(3).max(100).empty(''),
         description: Joi.string().min(3).max(100).empty(''),
         price: Joi.number().min(0).empty(''),
-        quantity: Joi.number().integer().min(0).empty('')
+        quantity: Joi.number().integer().min(0).empty(''),
+        productStatus: Joi.string().valid('active', 'deactivated').optional()
     });
     validateRequest(req, next, schema);
 }
