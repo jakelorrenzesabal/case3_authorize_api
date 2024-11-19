@@ -4,18 +4,18 @@ const Joi = require('joi');
 const orderService = require('../orders/order.service');
 const paymentService = require('../payment//payment.service');
 const validateRequest = require('_middleware/validate-request');
-const authorize = require('_middleware/authorize');
-const Role = require('_helpers/role');
+// const authorize = require('_middleware/authorize');
+// const Role = require('_helpers/role');
 
-router.get('/', authorize([Role.Admin, Role.Manager]), getAllOrders);
-router.get('/:id', authorize([Role.Admin, Role.Manager]), getOrderById);
-router.post('/', authorize([Role.User]), createOrderSchema, createOrder);
-router.put('/:id', authorize([Role.Admin, Role.Manager]), updateOrderSchema, updateOrder);
-router.put('/:id/cancel', authorize([Role.Admin, Role.Manager, Role.User]), cancelOrder);
-router.get('/:id/status', authorize([Role.User]), trackOrderStatus);
-router.put('/:id/process', authorize([Role.Admin, Role.Manager]), processOrder);
-router.put('/:id/ship', authorize([Role.Admin, Role.Manager]), shipOrder);
-router.put('/:id/deliver', authorize([Role.Admin, Role.Manager]), deliverOrder);
+router.get('/', /* authorize([Role.Admin, Role.Manager]), */ getAllOrders);
+router.get('/:id', /* authorize([Role.Admin, Role.Manager]), */ getOrderById);
+router.post('/', /* authorize([Role.User]), */ createOrderSchema, createOrder);
+router.put('/:id', /* authorize([Role.Admin, Role.Manager]), */ updateOrderSchema, updateOrder);
+router.put('/:id/cancel', /* authorize([Role.Admin, Role.Manager, Role.User]), */ cancelOrder);
+router.get('/:id/status', /* authorize([Role.User]), */ trackOrderStatus);
+router.put('/:id/process', /* authorize([Role.Admin, Role.Manager]), */ processOrder);
+router.put('/:id/ship', /* authorize([Role.Admin, Role.Manager]), */ shipOrder);
+router.put('/:id/deliver', /* authorize([Role.Admin, Role.Manager]), */ deliverOrder);
 
 module.exports = router;
 
@@ -40,12 +40,11 @@ function createOrderSchema(req, res, next) {
         productId: Joi.number().required(),
         totalAmount: Joi.number().positive().required(),
         shippingAddress: Joi.string().required().max(500),
-        salesChannel: Joi.string().valid('walk-in', 'online').optional(),
-        paymentMethod: Joi.string().valid('cash', 'card', 'digitalWallet').optional(),
+        salesChannel: Joi.string().valid('walk-in', 'online'),
+        paymentMethod: Joi.string().valid('cash', 'card', 'digitalWallet'),
     });
     validateRequest(req, next, schema);
 }
-
 function updateOrderSchema(req, res, next) {
     const schema = Joi.object({
         orderProduct: Joi.string().max(500).optional(),
@@ -95,7 +94,6 @@ function processPayment(req, res, next) {
         .then(payment => res.json(payment))
         .catch(next);
 }
-
 function updateOrderStatus(req, res, next) {
     const { status } = req.body;
     orderService.updateOrderStatus(req.params.id, orderStatus)

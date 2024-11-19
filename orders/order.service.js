@@ -11,6 +11,7 @@ module.exports = {
     processOrder,
     shipOrder,
     deliverOrder,
+    completeDelivery
 };
 
 async function getAllOrders() {
@@ -20,11 +21,9 @@ async function getAllOrders() {
         }
     });
 }
-
 async function getOrderById(id) {
     return await db.Order.findByPk(id);
 }
-
 async function createOrder(params) {
     const order = new db.Order(params);
 
@@ -37,7 +36,6 @@ async function createOrder(params) {
     await order.save();
     return order;
 }
-
 async function updateOrder(id, params) {
     const order = await db.Order.findByPk(id);
     if (!order) throw 'Order not found';
@@ -49,7 +47,6 @@ async function updateOrder(id, params) {
     await order.save();
     return order;
 }
-
 async function cancelOrder(id) {
     const order = await getOrderById(id);
     if (!order) throw 'Order not found';
@@ -78,13 +75,11 @@ async function cancelOrder(id) {
 
     return order;
 }
-
 async function trackOrderStatus(id) {
     const order = await db.Order.findByPk(id, { attributes: ['orderStatus'] });
     if (!order) throw 'Order not found';
     return order.orderStatus;
 }
-
 async function processOrder(id) {
     const order = await getOrderById(id);
     if (!order) throw 'Order not found';
@@ -93,7 +88,6 @@ async function processOrder(id) {
     order.orderStatus = 'processing';
     await order.save();
 }
-
 async function shipOrder(id) {
     const order = await getOrderById(id);
     if (!order) throw 'Order not found';
@@ -102,7 +96,6 @@ async function shipOrder(id) {
     order.orderStatus = 'shipped';
     await order.save();
 }
-
 async function deliverOrder(id) {
     const order = await getOrderById(id);
     if (!order) throw 'Order not found';
@@ -110,4 +103,49 @@ async function deliverOrder(id) {
 
     order.orderStatus = 'delivered';
     await order.save();
+}
+async function completeDelivery(orderId, userId) {
+    // Retrieve the order
+    const order = await db.Order.findByPk(orderId, {
+        include: [
+            { model: db.Delivery, attributes: ['deliveryStatus'] }, // Include delivery details
+            { model: db.Product, attributes: ['id', 'quantity', 'name'] } // Include product details
+        ]
+    });
+    if (!order) {
+        throw new Error(`Order with ID ${orderId} not found`);
+    }
+
+    // Ensure the delivery is marked as "delivered"
+    if (!order.Delivery || order.Delivery.deliveryStatus !== 'delivered') {
+        throw new Error('Delivery must be marked as "delivered" to complete it');
+    }
+
+    // Update inventory: reduce stock based on the product in the order
+    const inventory = await db.Inventory.findOne({ where: { productId: order.Product.id } });
+    if (!inventory) {
+        throw new Error(`Inventory not found for product ID ${order.Product.id}`);
+    }
+
+    // Deduct the quantity of the delivered product
+    const deliveredQuantity = order.Product.quantity;
+    if (inventory.quantity < deliveredQuantity) {
+        throw new Error(`Insufficient stock to deduct. Current stock: ${inventory.quantity}`);
+    }
+
+    inventory.quantity -= deliveredQuantity;
+    await inventory.save();
+
+    // Log the delivery completion
+    await logTransaction(
+        'complete_delivery',
+        userId,
+        `Completed delivery for order ID: ${orderId}, product: ${order.Product.name}, quantity: ${deliveredQuantity}`
+    );
+
+    return {
+        message: 'Delivery completed successfully, inventory updated',
+        orderId,
+        remainingStock: inventory.quantity
+    };
 }

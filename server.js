@@ -20,7 +20,8 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-app.use(express.static(path.join(__dirname, 'products')));
+
+//app.use(express.static(path.join(__dirname, 'products')));
 
 app.use('/api/users', require('./users/user.controller'));
 app.use('/api/branches', require('./branches/branch.controller'));
@@ -30,10 +31,11 @@ app.use('/api/inventory', require('./inventories/inventory.controller'));
 
 app.use('/api/payment', require('./payment/payment.controller'));
 app.use('/api/customers', require('./customers/customer.controller'));
+//app.use('/api/reports', require('./reports/report.controller'));
 //app.use('/api/transfers', require('./transfers/transfer.controller'));
 //app.use('/api/booking', require('./booking/booking.controller'));
 
-app.use('/api/products', express.static(path.join(__dirname, 'products')), require('./products/product.controller'));
+//app.use('/api/products', express.static(path.join(__dirname, 'products')), require('./products/product.controller'));
 
 app.use(cors({ origin: (origin, callback) => callback(null, true), credentials: true }));
 app.use('/accounts', require('./accounts/account.controller'));

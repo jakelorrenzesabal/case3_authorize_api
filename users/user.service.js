@@ -360,7 +360,6 @@ async function logActivity(userId, actionType, ipAddress, browserInfo, updateDet
         throw error;
     }
 }
-
 async function getUserActivities(userId, filters = {}) {
     const user = await getUser(userId);
     if (!user) throw new Error('User not found');

@@ -12,10 +12,9 @@ module.exports = {
 
 async function getInventory() {
     return await db.Inventory.findAll({ 
-        include: db.Product 
+        //include: db.Product 
     });
 }
-
 async function updateStockLevels(productId, warehouseQuantity, storeQuantity) {
     if (!productId) {
         throw new Error('Product ID is required');
@@ -30,7 +29,6 @@ async function updateStockLevels(productId, warehouseQuantity, storeQuantity) {
     inventory.storeQuantity = storeQuantity;
     return await inventory.save();
 }
-
 async function checkAvailability(productId) {
     const product = await db.Product.findByPk(productId, {
         include: [{
@@ -46,9 +44,11 @@ async function checkAvailability(productId) {
         storeQuantity: product.inventory ? product.inventory.storeQuantity : 0
     } : null;
 }
-
 async function getWarehouseInventory() {
-    return await db.Inventory.findAll({ where: { location: 'warehouse' }, include: [db.Product] });
+    return await db.Inventory.findAll({ 
+        where: { location: 'warehouse' }, 
+        include: [db.Product] 
+    });
 }
 async function getStoreInventory(storeId) {
     return await db.Inventory.findAll({
@@ -67,8 +67,7 @@ async function checkStockLevels() {
         }
     });
 }
-
-async function transferProduct(productId, quantity, sourceLocation, targetLocation) {
+async function transferProduct(productId, quantity, sourceLocation, targetLocation, userId) {
     const sourceInventory = await db.Inventory.findOne({
         where: { productId, locationType: sourceLocation }
     });
@@ -91,7 +90,14 @@ async function transferProduct(productId, quantity, sourceLocation, targetLocati
             quantity
         });
     }
+    
     await targetInventory.save();
 
-    return { message: `Product transferred successfully from ${sourceLocation} to ${targetLocation}` };
+    //await logTransaction('stock_transfer', userId, `Transferred ${quantity} units of product ${productId} from ${sourceLocation} to ${targetLocation}`);
+
+    return { 
+        message: `Product transferred successfully from ${sourceLocation} to ${targetLocation} by ${userId}`,
+        sourceInventory: sourceInventory.quantity,
+        targetInventory: targetInventory.quantity
+    };
 }

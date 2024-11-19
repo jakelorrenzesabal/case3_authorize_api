@@ -25,6 +25,7 @@
     db.ActivityLog = require('../models/activitylog.model')(sequelize);
     db.Payment = require('../payment/payment.model')(sequelize);
     db.Customer = require('../customers/customer.model')(sequelize);
+    db.Report = require('../reports/report.model')(sequelize);
     //db.Transfer = require('../transfers/transfer.model')(sequelize);
 
         defineAssociations();
@@ -71,4 +72,7 @@ function defineAssociations() {
     db.Order.belongsTo(db.Customer, { foreignKey: 'customerId' });
     db.Order.hasOne(db.Payment, { foreignKey: 'orderId', onDelete: 'CASCADE' });
     db.Payment.belongsTo(db.Order, { foreignKey: 'orderId' });
+
+    // db.Inventory.hasMany(db.Product, { foreignKey: 'productId' });
+    // db.Product.belongsTo(db.Inventory, { foreignKey: 'productId' });
 }

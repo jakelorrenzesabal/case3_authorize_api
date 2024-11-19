@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const customerService = require('./customer.service');
-const authorize = require('_middleware/authorize');
-const Role = require('_helpers/role');
+// const authorize = require('_middleware/authorize');
+// const Role = require('_helpers/role');
 
 router.get('/', getAll); 
-router.post('/register', authorize([Role.Admin]), registerCustomer);
-router.get('/:id', authorize([Role.Admin, Role.Staff]), getCustomerById);
-router.put('/:id/points', authorize([Role.Admin]), updateLoyaltyPoints);
+router.post('/register', /* authorize([Role.Admin]), */ registerCustomer);
+router.get('/:id', /* authorize([Role.Admin, Role.Staff]), */ getCustomerById);
+router.put('/:id/points', /* authorize([Role.Admin]), */ updateLoyaltyPoints);
 
-router.get('/:id/orderHistory', authorize([Role.Admin]), getCustomerOrderHistory);
+router.get('/:id/orderHistory', /* authorize([Role.Admin]), */ getCustomerOrderHistory);
 
 module.exports = router;
 
