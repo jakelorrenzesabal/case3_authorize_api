@@ -12,7 +12,14 @@ function model(sequelize) {
 
     const options = {
         defaultScope: {},
-        scopes: {}
+        scopes: {
+            warehouses: {
+                where: { type: 'warehouse' }
+            },
+            stores: {
+                where: { type: 'store' }
+            },
+        }
     };
 
     return sequelize.define('Branch', attributes, options);
