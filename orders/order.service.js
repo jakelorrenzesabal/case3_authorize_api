@@ -23,7 +23,7 @@ async function getAllOrders(role, accountId) {
 
     return await db.Order.findAll({
         where: whereCondition,
-        attributes: ['id', 'totalAmount', 'orderStatus', 'shippingAddress', 'createdAt', 'AccountId'],
+        attributes: ['id', 'totalAmount', 'orderStatus', 'shippingAddress', 'createdAt', 'AccountId', 'quantity'],
         include: [
             ...(role !== 'User' ? [{
                 model: db.Account,
@@ -32,7 +32,7 @@ async function getAllOrders(role, accountId) {
             {
                 model: db.Product,
                 attributes: ['id', 'name', 'price'],
-            }
+            },
         ],
         order: [['createdAt', 'DESC']],
     });
@@ -41,6 +41,7 @@ async function getAllOrders(role, accountId) {
 async function getOrderById(id) {
     return await db.Order.findByPk(id);
 }
+
 
 async function createOrder(params) {
     // Validate that the AccountId exists
@@ -52,15 +53,40 @@ async function createOrder(params) {
     if (!product) throw 'Product not found';
     if (product.productStatus !== 'active') throw 'Product is not available';
 
-    const order = new db.Order(params);
-    await order.save();
+    // Check product inventory
+    const inventory = await db.Inventory.findOne({ where: { productId: product.id } });
+    if (!inventory) throw 'Inventory not found for this product';
+
+    // Validate requested quantity against available inventory
+    const requestedQuantity = params.quantity || 1; // Default to 1 if not specified
+    if (requestedQuantity > inventory.quantity) {
+        throw `Insufficient stock. Only ${inventory.quantity} items available.`;
+    }
+
+    // Calculate total amount based on product price and quantity
+    const totalAmount = product.price * requestedQuantity;
+
+    // Create order with calculated total amount and quantity
+    const order = new db.Order({
+        ...params,
+        quantity: requestedQuantity,
+        totalAmount: totalAmount,
+        productId: product.id,
+        AccountId: account.id
+    });
     
-    // Fetch the order with account and product details
+    // Save the order
+    await order.save();
+
+    // Reduce inventory quantity
+    inventory.quantity -= requestedQuantity;
+    await inventory.save();
+    
+    // Fetch the order with detailed information
     const createdOrder = await db.Order.findByPk(order.id, {
         include: [
             { model: db.Account, attributes: ['id', 'email']},
-            { model: db.Product,attributes: ['id', 'name', 'price']
-            }
+            { model: db.Product, attributes: ['id', 'name', 'price',] }
         ]
     });
     
