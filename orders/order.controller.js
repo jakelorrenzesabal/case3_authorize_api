@@ -44,7 +44,7 @@ function createOrder(req, res, next) {
 function createOrderSchema(req, res, next) {
     const schema = Joi.object({
         productId: Joi.number().required(), // Add productId validation
-        totalAmount: Joi.number().positive().required(),
+        quantity: Joi.number().positive().optional().default(1), // Add quantity validation
         shippingAddress: Joi.string().required().max(500)
     });
     validateRequest(req, next, schema);

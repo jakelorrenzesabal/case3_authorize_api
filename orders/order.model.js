@@ -9,8 +9,10 @@ function model(sequelize) {
             allowNull: false, 
             defaultValue: 'pending'
         },
+        
         shippingAddress: { type: DataTypes.STRING, allowNull: false },
-        totalAmount: { type: DataTypes.FLOAT, allowNull: false  }
+        totalAmount: { type: DataTypes.DECIMAL(10, 2), allowNull: false  },
+        quantity: {type: DataTypes.INTEGER,allowNull: false,defaultValue: 1, validate: { min: 1 }}
     };
 
     const options = {
