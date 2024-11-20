@@ -9,8 +9,18 @@ module.exports = {
     reactivate
 };
 
-async function getProduct() {
-    return await db.Product.findAll({ where: { productStatus: 'active' } });
+async function getProduct(userRole) {
+    // Check if user is Admin or Manager to show all products
+    if (userRole === 'Admin' || userRole === 'Manager') {
+        return await db.Product.findAll();
+    }
+    
+    // For regular users, only show active products
+    return await db.Product.findAll({
+        where: { 
+            productStatus: 'active' 
+        }
+    });
 }
 async function getProductById(id) {
     const product = await db.Product.findByPk(id);
@@ -19,9 +29,6 @@ async function getProductById(id) {
     if (!product) {
         throw new Error('Invalid product ID');
     }
-
-    // Check if the product is active
-    await checkIfActive(product);
     return product;
 }
 async function createProduct(params) {
@@ -65,7 +72,7 @@ async function createProduct(params) {
 async function updateProduct(id, params) {
     const product = await getProductById(id);
     if (!product) throw 'Product not found';
-    await checkIfActive(product);
+    
     Object.assign(product, params);
     return await product.save();
 }
@@ -76,6 +83,14 @@ async function deactivate(id) {
 
     // Check if the product is already deactivated
     if (product.productStatus === 'deactivated') throw 'Product is already deactivated';
+
+    // Find the inventory for this product
+    const inventory = await db.Inventory.findOne({ where: { productId: id } });
+    
+    // Check if inventory quantity is zero before deactivating
+    if (inventory && inventory.quantity > 0) {
+        throw 'Cannot deactivate product with remaining inventory';
+    }
 
     // Set status to 'deactivated' and save
     product.productStatus = 'deactivated';
