@@ -19,7 +19,7 @@ router.put('/:id/reactivateProduct', authorize([Role.Admin, Role.Manager]), reac
 module.exports = router;
 
 function getProduct(req, res, next) {
-    productService.getProduct()
+    productService.getProduct(req.user.role)
         .then(products => res.json(products))
         .catch(next);
 }
