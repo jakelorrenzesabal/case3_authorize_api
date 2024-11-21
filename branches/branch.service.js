@@ -37,7 +37,7 @@ async function getBranchById(id) {
     await checkIfActive(branch);
     return branch;
 }
-async function createBranch(params) {
+async function createBranch(params, userId, ipAddress, browserInfo) {
     const branch = new db.Branch(params);
 
     if (await db.Branch.findOne({ where: { location: params.location } })) {
@@ -45,8 +45,10 @@ async function createBranch(params) {
     }
     branch.status = 'active'; // Ensure new branches are active
     await branch.save();
+
+    await logActivity(userId, 'created_branch', ipAddress, browserInfo, 'branch', branch.id, `Branch created as: ${params.type}`);
 }
-async function updateBranch(id, params) {
+async function updateBranch(id, params, userId, ipAddress, browserInfo) {
     const branch = await getBranchById(id);
     
     // Prevent updates to deactivated branches
@@ -56,11 +58,15 @@ async function updateBranch(id, params) {
     
     Object.assign(branch, params);
     await branch.save();
+
+    await logActivity(userId, 'modified_branch', ipAddress, browserInfo, 'branch', branch.id, `Branch updated as: ${db.ActivityLog}`);
 }
-async function _deleteBranch(id) {
+async function _deleteBranch(id, userId, ipAddress, browserInfo) {
     const branch = await getBranchById(id);
     branch.branchStatus = 'deactivated'; // Soft delete by updating status
     await branch.save();
+
+    await logActivity(userId, 'deleted_branch', ipAddress, browserInfo, 'branch', branch.id);
 }
 async function getBranch(id) {
     const branch = await db.Branch.findByPk(id, {

@@ -102,69 +102,128 @@ async function logout({ token, ipAddress, browserInfo, userId }) {
       throw new Error('Error during logout: ' + error.message);
   }
 }
-async function logActivity(AccountId, actionType, ipAddress, browserInfo, updateDetails = '') {
-    try {
-      // Create a new log entry in the 'activity_log' table
+// async function logActivity(AccountId, actionType, ipAddress, browserInfo, updateDetails = '') {
+//   try {
+//     // Create a new log entry in the 'activity_log' table
+//     await db.ActivityLog.create({
+//       AccountId,
+//       actionType,
+//       actionDetails: `IP Address: ${ipAddress}, Browser Info: ${browserInfo}, Details: ${updateDetails}`,
+//       timestamp: new Date()
+//     });
+
+//     // Count the number of logs for the user
+//     const logCount = await db.ActivityLog.count({ where: { AccountId } });
+
+//     if (logCount > 10) {
+//       // Find and delete the oldest logs
+//       const logsToDelete = await db.ActivityLog.findAll({
+//         where: { AccountId },
+//         order: [['timestamp', 'ASC']],
+//         limit: logCount - 10
+//       });
+
+//       if (logsToDelete.length > 0) {
+//         const logIdsToDelete = logsToDelete.map(log => log.id);
+
+//         await db.ActivityLog.destroy({
+//           where: {
+//             id: {
+//               [Op.in]: logIdsToDelete
+//             }
+//           }
+//         });
+//         console.log(`Deleted ${logIdsToDelete.length} oldest log(s) for user ${AccountId}.`);
+//       }
+//     }
+//   } catch (error) {
+//     console.error('Error logging activity:', error);
+//     throw error;
+//   }
+// }
+async function logActivity(AccountId, actionType, ipAddress, browserInfo, entity = '', entityId = null, details = '') {
+  try {
       await db.ActivityLog.create({
-        AccountId,
-        actionType,
-        actionDetails: `IP Address: ${ipAddress}, Browser Info: ${browserInfo}, Details: ${updateDetails}`,
-        timestamp: new Date()
+          AccountId,
+          actionType,
+          entity, 
+          entityId,
+          actionDetails: `IP: ${ipAddress}, Browser: ${browserInfo}, Details: ${details}`,
+          timestamp: new Date()
       });
-  
-      // Count the number of logs for the user
+
       const logCount = await db.ActivityLog.count({ where: { AccountId } });
-  
-      if (logCount > 10) {
-        // Find and delete the oldest logs
-        const logsToDelete = await db.ActivityLog.findAll({
-          where: { AccountId },
-          order: [['timestamp', 'ASC']],
-          limit: logCount - 10
-        });
-  
-        if (logsToDelete.length > 0) {
-          const logIdsToDelete = logsToDelete.map(log => log.id);
-  
-          await db.ActivityLog.destroy({
-            where: {
-              id: {
-                [Op.in]: logIdsToDelete
-              }
+
+    if (logCount > 10) {
+      // Find and delete the oldest logs
+      const logsToDelete = await db.ActivityLog.findAll({
+        where: { AccountId },
+        order: [['timestamp', 'ASC']],
+        limit: logCount - 10
+      });
+
+      if (logsToDelete.length > 0) {
+        const logIdsToDelete = logsToDelete.map(log => log.id);
+
+        await db.ActivityLog.destroy({
+          where: {
+            id: {
+              [Op.in]: logIdsToDelete
             }
-          });
-          console.log(`Deleted ${logIdsToDelete.length} oldest log(s) for user ${AccountId}.`);
-        }
+          }
+        });
+        console.log(`Deleted ${logIdsToDelete.length} oldest log(s) for user ${AccountId}.`);
       }
-    } catch (error) {
+    }
+  } catch (error) {
       console.error('Error logging activity:', error);
       throw error;
-    }
   }
-  async function getAccountActivities(AccountId, filters = {}) {
-    const account = await getAccount(AccountId);
-    if (!account) throw new Error('User not found');
-  
-    let whereClause = { AccountId };
-  
-    // Apply optional filters such as action type and timestamp range
-    if (filters.actionType) {
-      whereClause.actionType = { [Op.like]: `%${filters.actionType}%` };
-    }
-    if (filters.startDate || filters.endDate) {
-      const startDate = filters.startDate ? new Date(filters.startDate) : new Date(0);
-      const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
-      whereClause.timestamp = { [Op.between]: [startDate, endDate] };
-    }
-  
-    try {
-      const activities = await db.ActivityLog.findAll({ where: whereClause });
-      return activities;
-    } catch (error) {
-      console.error('Error retrieving activities:', error);
-      throw new Error('Error retrieving activities');
-    }
+}
+async function getAccountActivities(AccountId, filters = {}) {
+  const account = await getAccount(AccountId);
+  if (!account) throw new Error('User not found');
+
+  let whereClause = { AccountId };
+
+  // Apply optional filters such as action type and timestamp range
+  if (filters.actionType) {
+    whereClause.actionType = { [Op.like]: `%${filters.actionType}%` };
   }
+  if (filters.startDate || filters.endDate) {
+    const startDate = filters.startDate ? new Date(filters.startDate) : new Date(0);
+    const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
+    whereClause.timestamp = { [Op.between]: [startDate, endDate] };
+  }
+
+  try {
+    const activities = await db.ActivityLog.findAll({ where: whereClause });
+    return activities;
+  } catch (error) {
+    console.error('Error retrieving activities:', error);
+    throw new Error('Error retrieving activities');
+  }
+}
+//you can test this modified code for get account activities
+// async function getAccountActivities(AccountId, filters = {}, isAdmin = false) {
+//     let whereClause = isAdmin ? {} : { AccountId }; // Admins can see all logs
+
+//     if (filters.actionType) {
+//         whereClause.actionType = { [Op.like]: `%${filters.actionType}%` };
+//     }
+//     if (filters.startDate || filters.endDate) {
+//         const startDate = filters.startDate ? new Date(filters.startDate) : new Date(0);
+//         const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
+//         whereClause.timestamp = { [Op.between]: [startDate, endDate] };
+//     }
+
+//     try {
+//         return await db.ActivityLog.findAll({ where: whereClause });
+//     } catch (error) {
+//         console.error('Error retrieving activities:', error);
+//         throw new Error('Error retrieving activities');
+//     }
+// }
 async function refreshToken({ token, ipAddress }) { 
     const refreshToken = await getRefreshToken(token); 
     const account = await refreshToken.getAccount();

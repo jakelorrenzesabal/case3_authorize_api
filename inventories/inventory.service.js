@@ -68,7 +68,7 @@ async function checkStockLevels() {
         }
     });
 }
-async function transferProduct(productId, quantity, sourceLocation, targetLocation, userId) {
+async function transferProduct(productId, quantity, sourceLocation, targetLocation, userId, ipAddress, browserInfo) {
     // const sourceInventory = await db.Inventory.findOne({
     //     where: { productId, locationType: sourceLocation }
     // });
@@ -112,6 +112,16 @@ async function transferProduct(productId, quantity, sourceLocation, targetLocati
     } else {
         await db.Inventory.create({ productId, branchId: targetBranchId, quantity });
     }
+
+    // Log the transfer action
+    await logActivity(
+        userId, 'stock_transfer', 
+        ipAddress, 
+        browserInfo, 'inventory', 
+        productId, `Transferred ${quantity} 
+        from ${sourceLocation} 
+        to ${targetLocation}`
+    );
 
     return { 
         message: `Product transferred successfully from ${sourceLocation} to ${targetLocation} by ${userId}`,

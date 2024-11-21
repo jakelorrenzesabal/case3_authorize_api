@@ -1,14 +1,14 @@
-const db = require('_helpers/db');
+// const db = require('_helpers/db');
 
-module.exports = {
-    logTransaction
-};
+// module.exports = {
+//     logTransaction
+// };
 
-async function logTransaction(actionType, userId, details) {
-    await db.ActivityLog.create({
-        AccountId: userId,
-        actionType,
-        actionDetails: details,
-        timestamp: new Date()
-    });
-}
+// async function logTransaction(actionType, userId, details) {
+//     await db.ActivityLog.create({
+//         AccountId: userId,
+//         actionType,
+//         actionDetails: details,
+//         timestamp: new Date()
+//     });
+// }

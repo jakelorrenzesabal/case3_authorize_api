@@ -73,14 +73,19 @@ function authenticate(req, res, next) {
 //===================Logging Function=======================================
 function getActivities(req, res, next) {
     const filters = {
-      actionType: req.query.actionType,
-      startDate: req.query.startDate,
-      endDate: req.query.endDate
+        actionType: req.query.actionType,
+        startDate: req.query.startDate,
+        endDate: req.query.endDate
     };
+
     accountService.getAccountActivities(req.params.id, filters)
-      .then(activities => res.json(activities))
-      .catch(next);
-  }
+
+    //you can test this modified code
+    //accountService.getAccountActivities(null, filters, true)
+
+        .then(activities => res.json(activities))
+        .catch(next);
+}
 //====================Preferences Router Function=========================
 function getPreferences(req, res, next) {
     accountService.getPreferences(req.params.id)

@@ -34,6 +34,15 @@ async function createOrder(params) {
     }
 
     await order.save();
+
+    //log activity
+    await logActivity(
+        userId, 'order_creation', 
+        ipAddress, 
+        browserInfo, 'order', 
+        order.id, `Order created with total amount: ${params.totalAmount}`
+    );
+
     return order;
 }
 async function updateOrder(id, params) {
