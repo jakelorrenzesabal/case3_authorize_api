@@ -87,8 +87,8 @@ async function assignUser(BranchId, AccountId) {
             throw new Error('User is already assigned to this branch');
         }
         
-        if (account.role !== Role.Manager) {
-            throw new Error('Only managers can be assigned to a branch');
+        if (account.role !== Role.Staff) {
+            throw new Error('Only Staff can be assigned to a branch');
         }
 
         // Update the account's branch

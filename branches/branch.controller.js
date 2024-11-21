@@ -7,7 +7,7 @@ const authorize = require('_middleware/authorize');
 const Role = require('_helpers/role');
 
 router.get('/', authorize (Role. Admin),getAllBranch);
-router.get('/:id',authorize([Role.Admin,Role.Manager]),getBranchById);
+router.get('/:id',authorize([Role.Admin,Role.Staff]),getBranchById);
 router.delete('/:id', authorize (Role. Admin), _deleteBranch);
 router.post('/create', authorize (Role. Admin),createBranchSchema, createBranch);
 
@@ -79,7 +79,7 @@ function updateRole(req, res, next) {
 }
 function updateRoleSchema(req, res, next) {
     const schema = Joi.object({
-        role: Joi.string().valid(Role.Admin, Role.User, Role.Manager).empty('')
+        role: Joi.string().valid(Role.Admin, Role.User, Role.Staff).empty('')
     })
     validateRequest(req, next, schema);
 }

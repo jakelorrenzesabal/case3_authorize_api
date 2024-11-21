@@ -7,14 +7,14 @@ const inventoryService = require('../inventories/inventory.service');
 const authorize = require('_middleware/authorize');
 const Role = require('_helpers/role');
 
-router.get('/', authorize([Role.Admin, Role.Manager, Role.User]), getProduct);
-router.get('/:id', authorize([Role.Admin, Role.Manager, Role.User]), getProductById);
-router.post('/', authorize([Role.Admin, Role.Manager]), createProductSchema, createProduct);
-router.put('/:id', authorize([Role.Admin, Role.Manager]), updateProductSchema, updateProduct);
+router.get('/', authorize([Role.Admin, Role.Staff, Role.User]), getProduct);
+router.get('/:id', authorize([Role.Admin, Role.Staff, Role.User]), getProductById);
+router.post('/', authorize([Role.Admin, Role.Staff]), createProductSchema, createProduct);
+router.put('/:id', authorize([Role.Admin, Role.Staff]), updateProductSchema, updateProduct);
 router.get('/:productId/availability', authorize([Role.User]),  checkAvailability);
 
-router.put('/:id/deactivateProduct', authorize([Role.Admin, Role.Manager]), deactivateProduct);
-router.put('/:id/reactivateProduct', authorize([Role.Admin, Role.Manager]), reactivateProduct);
+router.put('/:id/deactivateProduct', authorize([Role.Admin, Role.Staff]), deactivateProduct);
+router.put('/:id/reactivateProduct', authorize([Role.Admin, Role.Staff]), reactivateProduct);
 
 module.exports = router;
 
