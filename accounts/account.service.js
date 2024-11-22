@@ -263,12 +263,23 @@ async function update(id, params, ipAddress, browserInfo) {
   const updatedFields = []; // Declare updatedFields array
   const nonUserFields = ['ipAddress', 'browserInfo'];
 
+  // Check if any meaningful changes are being made
+  const hasChanges = Object.keys(params).some(key => 
+    !nonUserFields.includes(key) && 
+    params[key] !== undefined && 
+    params[key] !== oldData[key]
+  );
+
+  if (!hasChanges) {
+    return basicDetails(account);
+  }
+
   if (params.email && account.email !== params.email && await db.Account.findOne({ where: { email: params.email } })) { 
-      throw 'Email"' + params.email + '" is already taken';
+      throw 'Email "' + params.email + '" is already taken';
   }
 
   if (params.password) {
-      params.passwordHash = await hash (params.password);
+      params.passwordHash = await hash(params.password);
   }
 
   for (const key in params) {
@@ -277,11 +288,12 @@ async function update(id, params, ipAddress, browserInfo) {
             updatedFields.push(`${key}: ${oldData[key]} -> ${params[key]}`);
         }
     }
-}
+  }
+
   Object.assign(account, params); 
   account.updated = Date.now(); 
- try {
 
+  try {
       await account.save();
 
       // Log activity with updated fields
@@ -293,7 +305,8 @@ async function update(id, params, ipAddress, browserInfo) {
   } catch (error) {
       console.error('Error logging activity:', error);
   }
-  return basicDetails (account);
+
+  return basicDetails(account);
 }
 async function _delete(id) {
     const account = await getAccount(id);

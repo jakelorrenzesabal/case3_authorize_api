@@ -106,7 +106,7 @@ function registerSchema(req, res, next) {
         firstName: Joi.string().required(), 
         lastName: Joi.string().required(),
         email: Joi.string().email().required(),
-        phoneNumber: Joi.string().min(11).required(),
+        phoneNumber: Joi.string().length(11).pattern(/^(09|\+639)\d{9}$/).required(),
         password: Joi.string().min(6).required(),
         confirmPassword: Joi.string().valid(Joi.ref('password')).required(), 
         acceptTerms: Joi.boolean().valid(true).required()
@@ -191,7 +191,7 @@ function createSchema (req, res, next) {
         firstName: Joi.string().required(), 
         lastName: Joi.string().required(), 
         email: Joi.string().email().required(),
-        phoneNumber: Joi.string().min(11).required(),  
+        phoneNumber: Joi.string().length(11).pattern(/^(09|\+639)\d{9}$/).required(),  
         password: Joi.string().min(6).required(), 
         confirmPassword: Joi.string().valid(Joi.ref('password')).required(),
         role: Joi.string().valid(Role. Admin, Role.User, Role.Staff).required()
@@ -208,13 +208,13 @@ function updateSchema(req, res, next) { const schemaRules = {
     firstName: Joi.string().empty(''), 
     lastName: Joi.string().empty(''),
     email: Joi.string().email().empty(''),
-    phoneNumber: Joi.string().min(11).empty(''),
+    phoneNumber: Joi.string().length(11).pattern(/^(09|\+639)\d{9}$/).empty(''),
     password: Joi.string().min(6).empty(''),
     confirmPassword: Joi.string().valid(Joi.ref('password')).empty('')
 }
 
 if (req.user.role === Role. Admin) {
-    schemaRules.role = Joi.string().valid (Role. Admin, Role.User, Role.Manager).empty('');
+    schemaRules.role = Joi.string().valid (Role. Admin, Role.User, Role.Staff).empty('');
 }
 
     const schema = Joi.object(schemaRules).with('password', 'confirmPassword'); 
