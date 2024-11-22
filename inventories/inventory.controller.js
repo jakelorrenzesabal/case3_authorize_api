@@ -5,13 +5,13 @@ const authorize = require('_middleware/authorize');
 const Role = require('_helpers/role');
 
 // Existing routes
-router.get('/', authorize([Role.Admin, Role.Manager]), getInventory);
-router.post('/', authorize([Role.Admin, Role.Manager]), updateStock);
+router.get('/', authorize([Role.Admin, Role.Staff]), getInventory);
+router.post('/', authorize([Role.Admin, Role.Staff]), updateStock);
 
 // New routes
-router.post('/reorder-point', authorize([Role.Admin, Role.Manager]), setReorderPoint);
-router.get('/low-stock', authorize([Role.Admin, Role.Manager]), getLowStock);
-router.get('/availability/:id', authorize([Role.Admin, Role.Manager]), checkAvailability);
+router.post('/reorder-point', authorize([Role.Admin, Role.Staff]), setReorderPoint);
+router.get('/low-stock', authorize([Role.Admin, Role.Staff]), getLowStock);
+router.get('/availability/:id', authorize([Role.Admin, Role.Staff]), checkAvailability);
 
 module.exports = router;
 

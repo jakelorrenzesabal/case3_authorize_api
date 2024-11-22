@@ -11,7 +11,7 @@ module.exports = {
 
 async function getProduct(userRole) {
     // Check if user is Admin or Manager to show all products
-    if (userRole === 'Admin' || userRole === 'Manager') {
+    if (userRole === 'Admin' || userRole === 'Staff') {
         return await db.Product.findAll();
     }
     
