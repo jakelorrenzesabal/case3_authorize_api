@@ -30,8 +30,8 @@
     db.Product.hasMany(db.Order, { foreignKey: 'productId' });
     db.Order.belongsTo(db.Product, { foreignKey: 'productId' });
     // Define associations
-    db.Product.belongsTo(db.Branch, { foreignKey: 'BranchId' });
-    db.Branch.hasMany(db.Product, { foreignKey: 'BranchId' });
+    db.Branch.hasMany(db.Inventory, { foreignKey: 'branchId'/* , onDelete: 'CASCADE' */ });
+    db.Inventory.belongsTo(db.Branch, { foreignKey: 'branchId' });
 
     db.Product.hasOne(db.Inventory, { as: 'inventory', foreignKey: 'productId' });
     db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });

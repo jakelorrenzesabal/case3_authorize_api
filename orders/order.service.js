@@ -1,5 +1,6 @@
 const db = require('_helpers/db');
 const { Sequelize } = require('sequelize');
+const { logOrderActivity } = require('./orderActivityLogger');
 
 module.exports = {
     getAllOrders,
@@ -10,7 +11,8 @@ module.exports = {
     trackOrderStatus,
     processOrder,
     shipOrder,
-    deliverOrder
+    deliverOrder,
+    getOrderActivities
 };
 
 async function getAllOrders(role, accountId) {
@@ -77,7 +79,15 @@ async function createOrder(params) {
     
     // Save the order
     await order.save();
-
+ // Log order creation
+ await logOrderActivity(
+    account.id,
+    order.id,
+    'created',
+    `Created order for ${requestedQuantity} units of product ${product.name}`,
+    params.ipAddress,
+    params.browserInfo
+);
     // Reduce inventory quantity
     inventory.quantity -= requestedQuantity;
     await inventory.save();
@@ -93,18 +103,29 @@ async function createOrder(params) {
     return createdOrder;
 }
 
-async function updateOrder(id, params) {
+async function updateOrder(id, params , AccountId, ipAddress, browserInfo) {
     const order = await db.Order.findByPk(id);
     if (!order) throw 'Order not found';
     if (order.orderStatus === 'cancelled') throw 'Cannot update a cancelled order';
-
+    
+    const oldStatus = order.orderStatus; // Save the old status before updating
     Object.assign(order, params);
     await order.save();
+      // Log order update
+      await logOrderActivity(
+        AccountId,
+        order.id,
+        'updated',
+        `Updated order. Status changed from '${oldStatus}' to '${order.orderStatus}'`,
+        ipAddress,
+        browserInfo
+    );
     return order;
 }
 
-async function cancelOrder(id) {
+async function cancelOrder(id, AccountId, ipAddress, browserInfo) {
     const order = await getOrderById(id);
+
     if (!order) throw 'Order not found';
 
     // Check if the order is already cancelled
@@ -116,10 +137,19 @@ async function cancelOrder(id) {
     if (['shipped', 'delivered'].includes(order.orderStatus)) {
         throw 'Cannot cancel order that has been shipped or delivered';
     }
-
+    const oldStatus = order.orderStatus; // Save the old status before canceling
     // Set status to 'cancelled' and save the order
     order.orderStatus = 'cancelled';
     await order.save();
+
+    await logOrderActivity(
+        AccountId,
+        order.id,
+        'cancelled',
+        `Cancelled order. Previous status: ${oldStatus}`,
+        ipAddress,
+        browserInfo
+    );
 
     // Find the associated product and deactivate it if needed
     const product = await db.Product.findByPk(order.productId);
@@ -140,13 +170,24 @@ async function trackOrderStatus(id, accountId) {
     return order.orderStatus;
 }
 
-async function processOrder(id) {
+async function processOrder(id, AccountId, ipAddress, browserInfo) {
     const order = await getOrderById(id);
     if (!order) throw 'Order not found';
     if (order.orderStatus === 'cancelled') throw 'Cannot process a cancelled order';
 
+    const oldStatus = order.orderStatus; // Save the old status before updating
     order.orderStatus = 'processing';
     await order.save();
+
+      // Log order processing activity
+      await logOrderActivity(
+        AccountId,
+        order.id,
+        'processed',
+        `Processed order. Status changed from '${oldStatus}' to 'processing'`,
+        ipAddress,
+        browserInfo
+    );
 }
 
 async function shipOrder(id) {
@@ -165,4 +206,10 @@ async function deliverOrder(id) {
 
     order.orderStatus = 'delivered';
     await order.save();
+}
+async function getOrderActivities(orderId, AccountId, filters = {}) {
+    const order = await getOrderById(orderId);
+    if (!order) throw 'Order not found';
+    
+    return await orderActivityLogger.getOrderActivities(AccountId, orderId, filters);
 }

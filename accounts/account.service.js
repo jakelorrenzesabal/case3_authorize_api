@@ -91,30 +91,47 @@ async function logActivity(AccountId, actionType, ipAddress, browserInfo, update
       throw error;
     }
   }
-  async function getAccountActivities(AccountId, filters = {}) {
-    const account = await getAccount(AccountId);
-    if (!account) throw new Error('User not found');
-  
-    let whereClause = { AccountId };
-  
-    // Apply optional filters such as action type and timestamp range
-    if (filters.actionType) {
-      whereClause.actionType = { [Op.like]: `%${filters.actionType}%` };
+    async function getAccountActivities(AccountId, filters = {}) {
+      const account = await getAccount(AccountId);
+      if (!account) throw new Error('User not found');
+    
+      let whereClause = { AccountId };
+    
+      // Apply optional filters such as action type and timestamp range
+      if (filters.actionType) {
+        whereClause.actionType = { [Op.like]: `%${filters.actionType}%` };
+      }
+      if (filters.startDate || filters.endDate) {
+        const startDate = filters.startDate ? new Date(filters.startDate) : new Date(0);
+        const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
+        whereClause.timestamp = { [Op.between]: [startDate, endDate] };
+      }
+    
+      try {
+        const activities = await db.ActivityLog.findAll({ where: whereClause });
+        return activities.map(activity => {
+          const formattedDate = new Intl.DateTimeFormat('en-US', {
+              year: '2-digit',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+          }).format(new Date(activity.timestamp));
+
+          return {
+              id: activity.id,
+              AccountId: activity.AccountId,
+              actionType: activity.actionType,
+              actionDetails: activity.actionDetails,
+              timestamp: formattedDate // Replace raw timestamp with formatted date
+          };
+      });
+      } catch (error) {
+        console.error('Error retrieving activities:', error);
+        throw new Error('Error retrieving activities');
+      }
     }
-    if (filters.startDate || filters.endDate) {
-      const startDate = filters.startDate ? new Date(filters.startDate) : new Date(0);
-      const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
-      whereClause.timestamp = { [Op.between]: [startDate, endDate] };
-    }
-  
-    try {
-      const activities = await db.ActivityLog.findAll({ where: whereClause });
-      return activities;
-    } catch (error) {
-      console.error('Error retrieving activities:', error);
-      throw new Error('Error retrieving activities');
-    }
-  }
 async function refreshToken({ token, ipAddress }) { 
     const refreshToken = await getRefreshToken(token); 
     const account = await refreshToken.getAccount();
