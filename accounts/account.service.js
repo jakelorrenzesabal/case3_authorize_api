@@ -22,6 +22,7 @@ module.exports = {
     create,
     logActivity,
     getAccountActivities,
+    getAllActivityLogs,
     update,
     updatePreferences,
     getPreferences,
@@ -91,6 +92,64 @@ async function logActivity(AccountId, actionType, ipAddress, browserInfo, update
       throw error;
     }
   }
+  // Add this new service function
+async function getAllActivityLogs(filters = {}) {
+  try {
+      let whereClause = {};
+      
+      // Apply filters
+      if (filters.actionType) {
+          whereClause.actionType = { [Op.like]: `%${filters.actionType}%` };
+      }
+      
+      if (filters.userId) {
+          whereClause.AccountId = filters.userId;
+      }
+      
+      if (filters.startDate || filters.endDate) {
+          const startDate = filters.startDate ? new Date(filters.startDate) : new Date(0);
+          const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
+          whereClause.timestamp = { [Op.between]: [startDate, endDate] };
+      }
+
+      // Get all activity logs with user details
+      const logs = await db.ActivityLog.findAll({
+          where: whereClause,
+          include: [{
+              model: db.Account,
+              attributes: ['email', 'firstName', 'lastName', 'role'],
+              required: true
+          }],
+          order: [['timestamp', 'DESC']]
+      });
+
+      // Format the response
+      return logs.map(log => {
+          const formattedDate = new Intl.DateTimeFormat('en-US', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+          }).format(new Date(log.timestamp));
+
+          return {
+              id: log.id,
+              userId: log.AccountId,
+              userEmail: log.Account.email,
+              userRole: log.Account.role,
+              userName: `${log.Account.firstName} ${log.Account.lastName}`,
+              actionType: log.actionType,
+              actionDetails: log.actionDetails,
+              timestamp: formattedDate
+          };
+      });
+  } catch (error) {
+      console.error('Error retrieving all activity logs:', error);
+      throw new Error('Error retrieving activity logs');
+  }
+}
     async function getAccountActivities(AccountId, filters = {}) {
       const account = await getAccount(AccountId);
       if (!account) throw new Error('User not found');

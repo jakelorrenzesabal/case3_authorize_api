@@ -20,6 +20,7 @@ router.put('/:id/preferences',authorize(), updatePreferences);
 
 router.get('/', authorize (Role. Admin), getAll);
 router.post('/:id/activity', authorize(), getActivities);
+router.get('/activity-logs', authorize(Role.Admin), getAllActivityLogs);
 router.get('/:id', authorize(), getById);
 router.post('/', authorize (Role. Admin), createSchema, create);
 router.put('/:id', authorize(), updateSchema, update);
@@ -57,6 +58,21 @@ function getActivities(req, res, next) {
     };
     accountService.getAccountActivities(req.params.id, filters)
         .then(activities => res.json(activities))
+        .catch(next);
+}
+function getAllActivityLogs(req, res, next) {
+    const filters = {
+        actionType: req.query.actionType,
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+        userId: req.query.userId
+    };
+    
+    accountService.getAllActivityLogs(filters)
+        .then(logs => res.json({
+            success: true,
+            data: logs
+        }))
         .catch(next);
 }
 //====================Preferences Router Function=========================
