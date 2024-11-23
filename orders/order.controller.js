@@ -16,7 +16,6 @@ router.put('/:id/process', authorize([Role.Admin, Role.Staff]), processOrder);
 router.put('/:id/ship', authorize([Role.Admin, Role.Staff]), shipOrder);
 router.put('/:id/deliver', authorize([Role.Admin, Role.Staff]), deliverOrder);
 
-
 module.exports = router;
 
 function getAllOrders(req, res, next) {
@@ -34,7 +33,9 @@ function createOrder(req, res, next) {
     // Add the AccountId from the authenticated user to the order data
     const orderData = {
         ...req.body,
-        AccountId: req.user.id  // req.user is set by the authorize middleware
+        AccountId: req.user.id, 
+        ipAddress: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+        browserInfo: req.headers['user-agent'] || 'Unknown Browser' // req.user is set by the authorize middleware
     };
     
     orderService.createOrder(orderData)
@@ -61,12 +62,18 @@ function updateOrderSchema(req, res, next) {
     validateRequest(req, next, schema);
 }
 function updateOrder(req, res, next) {
-    orderService.updateOrder(req.params.id, req.body)
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const browserInfo = req.headers['user-agent'] || 'Unknown Browser';
+
+    orderService.updateOrder(req.params.id, req.body, req.user.id, ipAddress, browserInfo)
         .then(() => res.json({ message: 'Order updated' }))
         .catch(next);
 }
 function cancelOrder(req, res, next) {
-    orderService.cancelOrder(req.params.id)
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const browserInfo = req.headers['user-agent'] || 'Unknown Browser';
+
+    orderService.cancelOrder(req.params.id, req.user.id, ipAddress, browserInfo)
         .then(order => res.json(order))
         .catch(next);
 }
@@ -76,7 +83,10 @@ function trackOrderStatus(req, res, next) {
         .catch(next);
 }
 function processOrder(req, res, next) {
-    orderService.processOrder(req.params.id)
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const browserInfo = req.headers['user-agent'] || 'Unknown Browser';
+    
+    orderService.processOrder(req.params.id, req.user.id, ipAddress, browserInfo)
         .then(() => res.json({ message: 'Order processed' }))
         .catch(next);
 }

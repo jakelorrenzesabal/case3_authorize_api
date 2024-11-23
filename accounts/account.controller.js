@@ -19,7 +19,7 @@ router.get('/:id/preferences',authorize(), getPreferences);
 router.put('/:id/preferences',authorize(), updatePreferences);
 
 router.get('/', authorize (Role. Admin), getAll);
-router.get('/:id/activity', authorize(), getActivities);
+router.post('/:id/activity', authorize(), getActivities);
 router.get('/:id', authorize(), getById);
 router.post('/', authorize (Role. Admin), createSchema, create);
 router.put('/:id', authorize(), updateSchema, update);
