@@ -32,9 +32,9 @@ function getAllBranch(req, res, next) {
 }
 function getBranchById(req, res, next) {
     // If the user is not an admin, ensure they're only accessing their own data
-    if (req.user.role !== 'Admin' && parseInt(req.params.id) !== req.user.id) {
-        return res.status(403).json({ message: 'Access denied' });
-    }
+    // if (req.user.role !== 'Admin' && parseInt(req.params.id) !== req.user.id) {
+    //     return res.status(403).json({ message: 'Access denied' });
+    // }
 
     branchService.getBranchById(req.params.id)
         .then(branch => res.json(branch))

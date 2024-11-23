@@ -5,15 +5,36 @@ module.exports = {
     updateStockLevels,
     checkAvailability,
     getWarehouseInventory,
-    getStoreInventory,
     checkStockLevels,
-    transferProduct
+    transferProduct,
+    checkInventoryLevels,
+    getInventoryByType
 };
 
 async function getInventory(branchId) {
     return await db.Inventory.findAll({ 
-        where: { branchId },
-        //include: db.Product 
+        //where: { branchId },
+        include: db.Product 
+    });
+}
+async function getInventoryByType(branchType) {
+    // Validate branch type
+    if (!['warehouse', 'store'].includes(branchType)) {
+        throw new Error('Invalid branch type. Allowed values are "warehouse" or "store".');
+    }
+
+    // Find branches of the specified type
+    const branches = await db.Branch.findAll({ where: { type: branchType, branchStatus: 'active' } });
+
+    if (!branches.length) {
+        throw new Error(`No active branches found for type: ${branchType}`);
+    }
+
+    // Fetch inventory for all branches of this type
+    const branchIds = branches.map(branch => branch.id);
+    return await db.Inventory.findAll({
+        where: { branchId: branchIds },
+        include: [db.Product],
     });
 }
 async function updateStockLevels(productId, warehouseQuantity, storeQuantity) {
@@ -46,18 +67,9 @@ async function checkAvailability(productId) {
     } : null;
 }
 async function getWarehouseInventory() {
-    return await db.Inventory.findAll({ 
-        where: { location: 'warehouse' }, 
+    return await db.Branch.findAll({ 
+        where: { type: 'warehouse' }, 
         include: [db.Product] 
-    });
-}
-async function getStoreInventory(storeId) {
-    return await db.Inventory.findAll({
-        where: { locationType: storeId },
-        include: [{
-            model: db.Product,
-            attributes: ['name', 'SKU', 'description', 'price']
-        }]
     });
 }
 async function checkStockLevels() {
@@ -68,39 +80,29 @@ async function checkStockLevels() {
         }
     });
 }
-async function transferProduct(productId, quantity, sourceLocation, targetLocation, userId, ipAddress, browserInfo) {
-    // const sourceInventory = await db.Inventory.findOne({
-    //     where: { productId, locationType: sourceLocation }
-    // });
-    // if (!sourceInventory || sourceInventory.quantity < quantity) {
-    //     throw new Error(`Insufficient stock in ${sourceLocation}`);
-    // }
+async function transferProduct(productId, quantity, sourceType, targetType, userId, ipAddress, browserInfo) {
+    // Validate types
+    if (!['warehouse', 'store'].includes(sourceType) || !['warehouse', 'store'].includes(targetType)) {
+        throw new Error('Invalid source or target type. Allowed types: "warehouse", "store".');
+    }
 
-    // sourceInventory.quantity -= quantity;
-    // await sourceInventory.save();
+    // Find the source and target branches
+    const sourceBranch = await db.Branch.findOne({ where: { type: sourceType, branchStatus: 'active' } });
+    const targetBranch = await db.Branch.findOne({ where: { type: targetType, branchStatus: 'active' } });
 
-    // let targetInventory = await db.Inventory.findOne({
-    //     where: { productId, locationType: targetLocation }
-    // });
-    // if (targetInventory) {
-    //     targetInventory.quantity += quantity;
-    // } else {
-    //     targetInventory = await db.Inventory.create({
-    //         productId,
-    //         locationType: targetLocation,
-    //         quantity
-    //     });
-    // }
-    
-    // await targetInventory.save();
+    if (!sourceBranch) {
+        throw new Error(`Source branch of type "${sourceType}" not found or is inactive.`);
+    }
+    if (!targetBranch) {
+        throw new Error(`Target branch of type "${targetType}" not found or is inactive.`);
+    }
 
-    //await logTransaction('stock_transfer', userId, `Transferred ${quantity} units of product ${productId} from ${sourceLocation} to ${targetLocation}`);
-
-    const sourceInventory = await db.Inventory.findOne({ where: { productId, branchId: sourceBranchId } });
-    const targetInventory = await db.Inventory.findOne({ where: { productId, branchId: targetBranchId } });
+    // Fetch source and target inventory
+    const sourceInventory = await db.Inventory.findOne({ where: { productId, branchId: sourceBranch.id } });
+    const targetInventory = await db.Inventory.findOne({ where: { productId, branchId: targetBranch.id } });
 
     if (!sourceInventory || sourceInventory.quantity < quantity) {
-        throw 'Insufficient stock at source branch';
+        throw new Error(`Insufficient stock in source location "${sourceType}" for Product ID: ${productId}.`);
     }
 
     // Update stock levels
@@ -110,22 +112,36 @@ async function transferProduct(productId, quantity, sourceLocation, targetLocati
     if (targetInventory) {
         targetInventory.quantity += quantity;
     } else {
-        await db.Inventory.create({ productId, branchId: targetBranchId, quantity });
+        await db.Inventory.create({ productId, branchId: targetBranch.id, quantity });
     }
 
-    // Log the transfer action
-    await logActivity(
-        userId, 'stock_transfer', 
-        ipAddress, 
-        browserInfo, 'inventory', 
-        productId, `Transferred ${quantity} 
-        from ${sourceLocation} 
-        to ${targetLocation}`
-    );
+    // Log the transfer
+    // await logActivity(
+    //     userId,
+    //     'stock_transfer',
+    //     ipAddress,
+    //     browserInfo,
+    //     'inventory',
+    //     productId,
+    //     `Transferred ${quantity} units of Product ID ${productId} from ${sourceType} to ${targetType}`
+    // );
 
-    return { 
-        message: `Product transferred successfully from ${sourceLocation} to ${targetLocation} by ${userId}`,
-        sourceInventory: sourceInventory.quantity,
-        targetInventory: targetInventory.quantity
+    return {
+        message: `Successfully transferred ${quantity} units of Product ID ${productId} from ${sourceType} to ${targetType}.`,
+        sourceStock: sourceInventory.quantity,
+        targetStock: targetInventory ? targetInventory.quantity : quantity,
     };
+}
+async function checkInventoryLevels(productId, branchId) {
+    const inventory = await db.Inventory.findOne({ where: { productId, branchId } });
+
+    if (!inventory) {
+        throw new Error(`Inventory not found for product ID: ${productId} at branch ID: ${branchId}`);
+    }
+
+    if (inventory.quantity < inventory.threshold) {
+        notifyAdminReorder(productId); // Implement this function to send alerts
+    }
+
+    return inventory;
 }

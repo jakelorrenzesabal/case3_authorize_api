@@ -11,11 +11,9 @@ function model(sequelize) {
         productStatus: { type: DataTypes.ENUM('deactivated', 'active'), allowNull: false, defaultValue: 'active'},
         SKU: { type: DataTypes.STRING, allowNull: true, UNIQUE: true }
     };
-    
     const options = {
         timestamps: true 
     };
     
-
     return sequelize.define('Product', attributes, options);
 };

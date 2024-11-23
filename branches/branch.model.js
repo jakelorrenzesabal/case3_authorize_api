@@ -9,7 +9,6 @@ function model(sequelize) {
         branchStatus: { type: DataTypes.ENUM('active', 'deactivated'), allowNull: false, defaultValue: 'active'},
         type: { type: DataTypes.ENUM('warehouse', 'store'), allowNull: false, defaultValue: 'store' }
     };
-
     const options = {
         defaultScope: {},
         scopes: {

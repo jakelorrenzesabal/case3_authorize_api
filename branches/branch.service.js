@@ -31,7 +31,17 @@ async function getBranchById(id) {
             model: db.Account,
             attributes: ['id', 'firstName', 'lastName', 'email', 'role'],
             required: false // Allow branches without accounts
-        }]
+        },
+        {
+            model: db.Inventory,
+                include: [
+                    {
+                        model: db.Product,
+                        attributes: ['id', 'name', 'description', 'price', 'quantity', 'productStatus'],
+                    },
+                ],
+        }
+        ]
     });
     if (!branch) throw 'Branch not found or is deactivated';
     await checkIfActive(branch);
@@ -40,13 +50,13 @@ async function getBranchById(id) {
 async function createBranch(params, userId, ipAddress, browserInfo) {
     const branch = new db.Branch(params);
 
-    if (await db.Branch.findOne({ where: { location: params.location } })) {
-        throw 'location "' + params.location + '" is already registered';
+    if (await db.Branch.findOne({ where: { type: params.type } })) {
+        throw 'type "' + params.type + '" is already registered';
     }
     branch.status = 'active'; // Ensure new branches are active
     await branch.save();
 
-    await logActivity(userId, 'created_branch', ipAddress, browserInfo, 'branch', branch.id, `Branch created as: ${params.type}`);
+    //await logActivity(userId, 'created_branch', ipAddress, browserInfo, 'branch', branch.id, `Branch created as: ${params.type}`);
 }
 async function updateBranch(id, params, userId, ipAddress, browserInfo) {
     const branch = await getBranchById(id);

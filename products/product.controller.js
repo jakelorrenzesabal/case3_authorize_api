@@ -40,7 +40,7 @@ function createProductSchema(req, res, next) {
         SKU: Joi.string().optional().max(50),
         price: Joi.number().required().min(0),
         quantity: Joi.number().integer().min(0),
-        category: Joi.string().optional().max(50)
+        category: Joi.string().optional().max(50),
     });
     validateRequest(req, next, schema);
 }

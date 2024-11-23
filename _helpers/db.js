@@ -14,7 +14,7 @@
 
         const sequelize = new Sequelize(database, user, password, { host: 'localhost', dialect: 'mysql' });
 
-    db.User = require('../users/user.model')(sequelize);
+    //db.User = require('../users/user.model')(sequelize);
     db.Order = require('../orders/order.model')(sequelize);
     db.Preferences = require('../models/preferences.model')(sequelize);  
     db.Product = require('../products/product.model')(sequelize);
@@ -24,7 +24,7 @@
     db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
     db.ActivityLog = require('../models/activitylog.model')(sequelize);
     db.Payment = require('../payment/payment.model')(sequelize);
-    db.Customer = require('../customers/customer.model')(sequelize);
+    //db.Warehouse = require('../models/warehouse.model')(sequelize);
     db.Report = require('../reports/report.model')(sequelize);
     //db.Transfer = require('../transfers/transfer.model')(sequelize);
 
@@ -68,17 +68,33 @@ function defineAssociations() {
     db.Product.hasMany(db.Order, { foreignKey: 'productId' });
     db.Order.belongsTo(db.Product, { foreignKey: 'productId' });
 
-    db.Customer.hasMany(db.Order, { foreignKey: 'customerId', onDelete: 'CASCADE' });
-    db.Order.belongsTo(db.Customer, { foreignKey: 'customerId' });
+    // db.Customer.hasMany(db.Order, { foreignKey: 'customerId', onDelete: 'CASCADE' });
+    // db.Order.belongsTo(db.Customer, { foreignKey: 'customerId' });
     db.Order.hasOne(db.Payment, { foreignKey: 'orderId', onDelete: 'CASCADE' });
     db.Payment.belongsTo(db.Order, { foreignKey: 'orderId' });
+
+    db.Product.hasMany(db.Inventory, { foreignKey: 'productId'/* , onDelete: 'CASCADE' */ });
+    db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
 
     db.Branch.hasMany(db.Inventory, { foreignKey: 'branchId'/* , onDelete: 'CASCADE' */ });
     db.Inventory.belongsTo(db.Branch, { foreignKey: 'branchId' });
     
-    db.Product.hasMany(db.Inventory, { foreignKey: 'productId' });
-    db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
+    // db.Product.hasMany(db.Branch, { foreignKey: 'productId' });
+    // db.Branch.belongsTo(db.Product, { foreignKey: 'productId' });
+    // db.Branch.hasMany(db.Product, { foreignKey: 'branchId' });
+    // db.Product.belongsTo(db.Branch, { foreignKey: 'branchId' });
 
     db.Account.hasMany(db.Order, { foreignKey: 'customerId' });
     db.Order.belongsTo(db.Account, { foreignKey: 'customerId' });
+
+    // db.Product.hasMany(db.Branch, { foreignKey: 'productId' });
+    // db.Branch.belongsTo(db.Product, { foreignKey: 'productId' });
+
+    db.Product.hasMany(db.Inventory, { foreignKey: 'productId' });
+    db.Inventory.belongsTo(db.Product, { foreignKey: 'productId' });
+
+    // A Warehouse can have many Inventory records (one-to-many)
+    // db.Warehouse.hasMany(db.Inventory, { foreignKey: 'warehouseId' });
+    // db.Inventory.belongsTo(db.Warehouse, { foreignKey: 'warehouseId' });
+
 }
