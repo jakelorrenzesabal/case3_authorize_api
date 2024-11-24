@@ -25,7 +25,7 @@ async function getAllOrders(role, accountId) {
 
     return await db.Order.findAll({
         where: whereCondition,
-        attributes: ['id', 'totalAmount', 'orderStatus', 'shippingAddress', 'createdAt', 'AccountId', 'quantity'],
+        attributes: ['id', 'totalAmount', 'orderStatus', 'shippingAddress', 'payment','createdAt', 'AccountId', 'quantity'],
         include: [
             ...(role !== 'User' ? [{
                 model: db.Account,

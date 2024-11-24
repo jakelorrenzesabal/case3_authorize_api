@@ -36,10 +36,53 @@ async function updateStock(productId, quantity) {
         throw new Error('Inventory not found for this product');
     }
 
-    inventory.quantity = quantity;
-    await inventory.save();
-    
-    return inventory;
+    // Get warehouse stock information
+    const warehouse = await db.Warehouse.findOne({
+        where: { 
+            productId,
+            status: 'active'
+        }
+    });
+
+    if (!warehouse) {
+        throw new Error('Warehouse stock not found for this product');
+    }
+
+    // Check if we have enough inventory to remove
+    if (quantity > inventory.quantity) {
+        throw new Error('Insufficient inventory to remove');
+    }
+
+    // Calculate the amount to be removed from inventory
+    const amountToRemove = quantity;
+
+    try {
+        // Remove from inventory
+        inventory.quantity -= amountToRemove;
+        await inventory.save();
+
+        // Add to warehouse
+        warehouse.bulkQuantity += amountToRemove;
+        warehouse.lastRestockDate = new Date();
+        await warehouse.save();
+        
+        return {
+            inventory: {
+                productId: inventory.productId,
+                quantity: inventory.quantity,
+                reorderPoint: inventory.reorderPoint
+            },
+            warehouse: {
+                bulkQuantity: warehouse.bulkQuantity,
+                minimumBulkLevel: warehouse.minimumBulkLevel,
+                location: warehouse.location,
+                lastRestockDate: warehouse.lastRestockDate
+            }
+        };
+    } catch (error) {
+        // If anything fails, throw the error
+        throw new Error(`Failed to update stock: ${error.message}`);
+    }
 }
 
 async function setReorderPoint(productId, reorderPoint) {
