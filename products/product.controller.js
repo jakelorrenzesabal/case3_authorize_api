@@ -4,17 +4,17 @@ const Joi = require('joi');
 const validateRequest = require('_middleware/validate-request');
 const productService = require('../products/product.service');
 const inventoryService = require('../inventories/inventory.service');
-// const authorize = require('_middleware/authorize');
-// const Role = require('_helpers/role');
+const authorize = require('_middleware/authorize');
+const Role = require('_helpers/role');
 
-router.get('/', /* authorize([Role.Admin, Role.Manager, Role.User]), */ getProduct);
-router.get('/:id', /* authorize([Role.Admin, Role.Manager, Role.User]), */ getProductById);
-router.post('/', /* authorize([Role.Admin, Role.Manager]), */ createProductSchema, createProduct);
-router.put('/:id', /* authorize([Role.Admin, Role.Manager]), */ updateProductSchema, updateProduct);
-router.post('/add/:id', /* authorize([Role.Admin, Role.Manager]), */ addProductQuantity);
-router.get('/:productId/availability', /* authorize([Role.User]), */  checkAvailability);
-router.put('/:id/deactivate', /* authorize([Role.Admin, Role.Manager]), */ deactivateProduct);
-router.put('/:id/reactivate', /* authorize([Role.Admin, Role.Manager]), */ reactivateProduct);
+router.get('/', authorize([Role.Admin, Role.Manager, Role.User]), getProduct);
+router.get('/:id', authorize([Role.Admin, Role.Manager, Role.User]), getProductById);
+router.post('/', authorize([Role.Admin, Role.Manager]), createProductSchema, createProduct);
+router.put('/:id', authorize([Role.Admin, Role.Manager]), updateProductSchema, updateProduct);
+router.post('/add/:id', authorize([Role.Admin, Role.Manager]), addProductQuantity);
+router.get('/:productId/availability', authorize([Role.User]),  checkAvailability);
+router.put('/:id/deactivate', authorize([Role.Admin, Role.Manager]), deactivateProduct);
+router.put('/:id/reactivate', authorize([Role.Admin, Role.Manager]), reactivateProduct);
 
 module.exports = router;
 

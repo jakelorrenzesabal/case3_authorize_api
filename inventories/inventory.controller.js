@@ -3,17 +3,17 @@ const router = express.Router();
 const Joi = require('joi');
 const validateRequest = require('_middleware/validate-request');
 const inventoryService = require('../inventories/inventory.service');
-// const authorize = require('_middleware/authorize');
-// const Role = require('_helpers/role');
+const authorize = require('_middleware/authorize');
+const Role = require('_helpers/role');
 
-router.get('/', /* authorize([Role.Admin, Role.Manager]), */ getInventory);
+router.get('/', authorize([Role.Admin, Role.Manager]), getInventory);
 router.get('/:branchType', getInventoryByType)
-//router.get('/:branchId', /* authorize([Role.Admin, Role.Manager]), */ getInventory);
-router.post('/', /* authorize([Role.Admin, Role.Manager]), */ updateStock);
+//router.get('/:branchId', authorize([Role.Admin, Role.Manager]), getInventory);
+router.post('/', authorize([Role.Admin, Role.Manager]), updateStock);
 
 //router.get('/:id', /* authorize([Role.Manager, Role.Admin]), */ getInventoryById);
 
-router.post('/transfer', /* authorize([Role.Admin, Role.Manager]), */ transferProductSchema, transferProduct);
+router.post('/transfer', authorize([Role.Admin, Role.Manager]), transferProductSchema, transferProduct);
 
 module.exports = router;
 

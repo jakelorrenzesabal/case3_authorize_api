@@ -3,23 +3,23 @@ const router = express.Router();
 const Joi = require('joi');
 const branchService = require('./branch.service');
 const validateRequest = require('_middleware/validate-request');
-// const authorize = require('_middleware/authorize');
-// const Role = require('_helpers/role');
+const authorize = require('_middleware/authorize');
+const Role = require('_helpers/role');
 
-router.get('/', /* authorize (Role. Admin), */getAllBranch);
-router.get('/:id',/* authorize(['Admin','User']), */getBranchById);
-router.delete('/:id', /* authorize (Role. Admin), */ _deleteBranch);
-router.post('/create', /* authorize (Role. Admin), */createBranchSchema, createBranch);
+router.get('/', authorize (Role. Admin),getAllBranch);
+router.get('/:id',authorize(['Admin','User']),getBranchById);
+router.delete('/:id', authorize (Role. Admin), _deleteBranch);
+router.post('/create', authorize (Role. Admin),createBranchSchema, createBranch);
 
-router.put('/:id', /* authorize (Role. Admin), */ updateBranchSchema, updateBranch);
-router.post('/:id/assign/:AccountId', /* authorize (Role. Admin), */assignUser);
-router.post('/:id/remove/:AccountId', /* authorize (Role. Admin), */removeUserFromBranch);
+router.put('/:id', authorize (Role. Admin), updateBranchSchema, updateBranch);
+router.post('/:id/assign/:AccountId', authorize (Role. Admin),assignUser);
+router.post('/:id/remove/:AccountId', authorize (Role. Admin),removeUserFromBranch);
 
-router.put('/:id/deactivate', /* authorize (Role. Admin), */ deactivateBranch);
-router.put('/:id/reactivate', /* authorize (Role. Admin), */ reactivateBranch);
+router.put('/:id/deactivate', authorize (Role. Admin), deactivateBranch);
+router.put('/:id/reactivate', authorize (Role. Admin), reactivateBranch);
 
-router.put('/:id/role', /* authorize (Role. Admin), */ updateRoleSchema, updateRole);
-router.get('/type/:type', /* authorize(['Admin']), */ getBranchesByType);
+router.put('/:id/role', authorize (Role. Admin), updateRoleSchema, updateRole);
+router.get('/type/:type', authorize(['Admin']), getBranchesByType);
 
 
 module.exports = router;
@@ -32,9 +32,9 @@ function getAllBranch(req, res, next) {
 }
 function getBranchById(req, res, next) {
     // If the user is not an admin, ensure they're only accessing their own data
-    // if (req.user.role !== 'Admin' && parseInt(req.params.id) !== req.user.id) {
-    //     return res.status(403).json({ message: 'Access denied' });
-    // }
+    if (req.user.role !== 'Admin' && parseInt(req.params.id) !== req.user.id) {
+        return res.status(403).json({ message: 'Access denied' });
+    }
 
     branchService.getBranchById(req.params.id)
         .then(branch => res.json(branch))
