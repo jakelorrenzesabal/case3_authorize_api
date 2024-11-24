@@ -24,6 +24,7 @@ app.use(express.static(path.join(__dirname, 'products')));
 app.use('/api/users', require('./users/user.controller'));
 app.use('/branches', require('./branches/branch.controller'));
 app.use('/warehouse', require('./warehouse/warehouse.controller'));
+app.use('/sales', require('./sales/sales.controller'));
 app.use('/orders', require('./orders/order.controller'));
 app.use('/products', require('./products/product.controller'));
 app.use('/inventory', require('./inventories/inventory.controller'));

@@ -25,8 +25,12 @@
     db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
     db.ActivityLog = require('../models/activitylog.model')(sequelize);
     db.Warehouse = require('../warehouse/warehouse.model')(sequelize);
+    db.DailySales = require('../sales/sales.model')(sequelize);
 
     db.Order.belongsTo(db.Account, { foreignKey: 'AccountId' });
+
+    db.Order.hasMany(db.DailySales, { foreignKey: 'orderId' });
+    db.DailySales.belongsTo(db.Order, { foreignKey: 'orderId' });
     
     db.Product.hasMany(db.Warehouse, { foreignKey: 'productId' });
     db.Warehouse.belongsTo(db.Product, { foreignKey: 'productId' });
