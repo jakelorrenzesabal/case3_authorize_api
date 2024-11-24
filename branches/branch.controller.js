@@ -52,7 +52,8 @@ function createBranch(req, res, next) {
 function createBranchSchema(req, res, next) {
     const schema = Joi.object({
         name: Joi.string().required().min(3).max(100),
-        location: Joi.string().required().max(255)
+        location: Joi.string().required().max(255),
+        type: Joi.string().valid('warehouse', 'store')
     });
     validateRequest(req, next, schema);
 }

@@ -314,6 +314,10 @@ async function create(params) {
   if (existingAccount) {
       throw `Email "${params.email}" is already registered`;
   }
+  const existingAccountNumber = await db.Account.findOne({ where: { phoneNumber: params.phoneNumber } });
+  if (existingAccountNumber) {
+      throw `PhoneNumber "${params.phoneNumber}" is already registered`;
+  }
 
   const account = new db.Account(params);
   account.verified = Date.now();

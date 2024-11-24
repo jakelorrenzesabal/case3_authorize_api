@@ -38,6 +38,7 @@ async function createProduct(params) {
         // await checkIfActive(product);
         // Product exists, update the inventory quantity
         const inventory = await db.Inventory.findOne({ where: { productId: product.id } });
+        const warehouse = await db.Warehouse.findOne({ where: { productId: product.id } });
         
         if (inventory) {
             inventory.quantity += params.quantity || 1; // Increase the quantity by the given value or by 1 if not specified
@@ -47,6 +48,18 @@ async function createProduct(params) {
             await db.Inventory.createProduct({
                 productId: product.id,
                 quantity: params.quantity || 1
+            });
+        }
+        if (warehouse) {
+            warehouse.bulkQuantity += params.bulkQuantity || 0;
+            await warehouse.save();
+        } else {
+            await db.Warehouse.create({
+                productId: product.id,
+                bulkQuantity: params.bulkQuantity || 0,
+                minimumBulkLevel: params.minimumBulkLevel || 100,
+                location: params.location || 'MAIN',
+                status: 'active'
             });
         }
 
@@ -64,6 +77,13 @@ async function createProduct(params) {
         await db.Inventory.create({
             productId: product.id,
             quantity: params.quantity || 1
+        });
+        await db.Warehouse.create({
+            productId: product.id,
+            bulkQuantity: params.bulkQuantity || 0,
+            minimumBulkLevel: params.minimumBulkLevel || 100,
+            location: params.location || 'MAIN',
+            status: 'active'
         });
 
         return { message: 'New product created', product };

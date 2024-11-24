@@ -13,7 +13,9 @@ module.exports = {
     updateRole,
 
     deactivateBranch,
-    reactivateBranch
+    reactivateBranch,
+
+    getBranchesByType
 };
 
 async function getAllBranch() {
@@ -182,4 +184,11 @@ async function checkIfActive(branch) {
     if (branch.branchStatus === 'deactivated') {
         throw new Error('Product is deactivated');
     }
+}
+async function getBranchesByType(type) {
+    if (!['warehouse', 'store'].includes(type)) {
+        throw 'Invalid branch type';
+    }
+
+    return await db.Branch.findAll({ where: { type, branchStatus: 'active' } });
 }
