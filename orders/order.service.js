@@ -1,6 +1,7 @@
 const db = require('_helpers/db');
 const { Sequelize } = require('sequelize');
 const { logOrderActivity } = require('./orderActivityLogger');
+const salesService = require('../sales/sales.service');
 
 module.exports = {
     getAllOrders,
@@ -60,7 +61,7 @@ async function createOrder(params) {
     if (!inventory) throw 'Inventory not found for this product';
 
     // Validate requested quantity against available inventory
-    const requestedQuantity = params.quantity || 1; // Default to 1 if not specified
+    const requestedQuantity = params.quantity || 1;
     if (requestedQuantity > inventory.quantity) {
         throw `Insufficient stock. Only ${inventory.quantity} items available.`;
     }
@@ -68,39 +69,70 @@ async function createOrder(params) {
     // Calculate total amount based on product price and quantity
     const totalAmount = product.price * requestedQuantity;
 
-    // Create order with calculated total amount and quantity
-    const order = new db.Order({
-        ...params,
-        quantity: requestedQuantity,
-        totalAmount: totalAmount,
-        productId: product.id,
-        AccountId: account.id
-    });
-    
-    // Save the order
-    await order.save();
- // Log order creation
- await logOrderActivity(
-    account.id,
-    order.id,
-    'created',
-    `Created order for ${requestedQuantity} units of product ${product.name}`,
-    params.ipAddress,
-    params.browserInfo
-);
-    // Reduce inventory quantity
-    inventory.quantity -= requestedQuantity;
-    await inventory.save();
-    
-    // Fetch the order with detailed information
-    const createdOrder = await db.Order.findByPk(order.id, {
-        include: [
-            { model: db.Account, attributes: ['id', 'email']},
-            { model: db.Product, attributes: ['id', 'name', 'price',] }
-        ]
-    });
-    
-    return createdOrder;
+    try {
+        // Create order with calculated total amount and quantity
+        const order = new db.Order({
+            ...params,
+            quantity: requestedQuantity,
+            totalAmount: totalAmount,
+            productId: product.id,
+            AccountId: account.id,
+            orderStatus: 'pending'
+        });
+        
+        // Save the order
+        await order.save();
+
+        // Log order creation
+        await logOrderActivity(
+            account.id,
+            order.id,
+            'created',
+            `Created order for ${requestedQuantity} units of product ${product.name}`,
+            params.ipAddress,
+            params.browserInfo,
+        );
+
+        // Update inventory
+        inventory.quantity -= requestedQuantity;
+        await inventory.save();
+
+        // Update daily sales
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let dailySales = await db.DailySales.findOne({
+            where: { date: today }
+        });
+
+        if (dailySales) {
+            dailySales.totalSales = Sequelize.literal(`totalSales + ${totalAmount}`);
+            dailySales.totalOrders = Sequelize.literal('totalOrders + 1');
+            dailySales.lastUpdated = new Date();
+            await dailySales.save();
+        } else {
+            await db.DailySales.create({
+                date: today,
+                totalSales: totalAmount,
+                totalOrders: 1,
+                lastUpdated: new Date()
+            });
+        }
+
+        
+        // Fetch the complete order details
+        const createdOrder = await db.Order.findByPk(order.id, {
+            include: [
+                { model: db.Account, attributes: ['id', 'email'] },
+                { model: db.Product, attributes: ['id', 'name', 'price'] }
+            ]
+        });
+        
+        return createdOrder;
+
+    } catch (error) {
+        throw error;
+    }
 }
 
 async function updateOrder(id, params , AccountId, ipAddress, browserInfo) {
