@@ -9,6 +9,11 @@ function model(sequelize) {
             allowNull: false, 
             defaultValue: 'pending'
         },
+        salesChannel: { 
+            type: DataTypes.ENUM('walk-in', 'online'), 
+            allowNull: false, 
+            defaultValue: 'online' 
+        },
         
         shippingAddress: { type: DataTypes.STRING, allowNull: false },
         totalAmount: { type: DataTypes.DECIMAL(10, 2), allowNull: false  },

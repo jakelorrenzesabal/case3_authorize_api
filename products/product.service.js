@@ -41,22 +41,22 @@ async function createProduct(params) {
         const warehouse = await db.Warehouse.findOne({ where: { productId: product.id } });
         
         if (inventory) {
-            inventory.quantity += params.quantity || 1; // Increase the quantity by the given value or by 1 if not specified
+            inventory.quantity += params.quantity || 0; // Increase the quantity by the given value or by 1 if not specified
             await inventory.save();
         } else {
             // If no inventory exists for the product, create it (this should generally not happen if managed correctly)
             await db.Inventory.createProduct({
                 productId: product.id,
-                quantity: params.quantity || 1
+                quantity: params.quantity || 0 
             });
         }
         if (warehouse) {
-            warehouse.bulkQuantity += params.bulkQuantity || 0;
+            warehouse.bulkQuantity += params.bulkQuantity || 1;
             await warehouse.save();
         } else {
             await db.Warehouse.create({
                 productId: product.id,
-                bulkQuantity: params.bulkQuantity || 0,
+                bulkQuantity: params.bulkQuantity || 1,
                 minimumBulkLevel: params.minimumBulkLevel || 100,
                 location: params.location || 'MAIN',
                 status: 'active'
@@ -76,11 +76,11 @@ async function createProduct(params) {
         // Create inventory for the new product
         await db.Inventory.create({
             productId: product.id,
-            quantity: params.quantity || 1
+            quantity: params.quantity || 0
         });
         await db.Warehouse.create({
             productId: product.id,
-            bulkQuantity: params.bulkQuantity || 0,
+            bulkQuantity: params.bulkQuantity || 1,
             minimumBulkLevel: params.minimumBulkLevel || 100,
             location: params.location || 'MAIN',
             status: 'active'
