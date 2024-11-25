@@ -26,7 +26,7 @@ async function getAllOrders(role, accountId) {
 
     return await db.Order.findAll({
         where: whereCondition,
-        attributes: ['id', 'totalAmount', 'orderStatus', 'shippingAddress', 'payment','createdAt', 'AccountId', 'quantity'],
+        attributes: ['id', 'totalAmount', 'orderStatus', 'salesChannel','shippingAddress', 'payment','createdAt', 'AccountId', 'quantity'],
         include: [
             ...(role !== 'User' ? [{
                 model: db.Account,
@@ -69,15 +69,18 @@ async function createOrder(params) {
     // Calculate total amount based on product price and quantity
     const totalAmount = product.price * requestedQuantity;
 
+    const orderStatus = params.salesChannel === 'walk-in' ? 'processing' : 'pending';
+    
     try {
         // Create order with calculated total amount and quantity
+        
         const order = new db.Order({
             ...params,
             quantity: requestedQuantity,
             totalAmount: totalAmount,
             productId: product.id,
             AccountId: account.id,
-            orderStatus: 'pending'
+            orderStatus: orderStatus
         });
         
         // Save the order

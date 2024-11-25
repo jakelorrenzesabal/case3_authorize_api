@@ -46,6 +46,7 @@ function createOrderSchema(req, res, next) {
     const schema = Joi.object({
         productId: Joi.number().required(), // Add productId validation
         quantity: Joi.number().positive().optional().default(1), // Add quantity validation
+        salesChannel: Joi.string().valid('walk-in', 'online'),
         payment: Joi.string().valid('Cash', 'Card', 'digitalWallet').required(),
         shippingAddress: Joi.string().required().max(500)
     });
